@@ -326,7 +326,7 @@ CSS_PLACEHOLDER
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
 <script>
-const ANTHROPIC_API_KEY = '';
+let ANTHROPIC_API_KEY = localStorage.getItem('sue_map_ak') || '';
 """
 
 JS = """\
@@ -781,6 +781,41 @@ function updateChips(){
 
 function useChip(el){document.getElementById('query-box').value=el.dataset.q;submitQuery();}
 
+// ═══════ API KEY MANAGEMENT ═══════
+function setApiKey(){
+  const k=prompt('Paste your Anthropic API key (stored locally in your browser only):');
+  if(k&&k.trim().startsWith('sk-ant')){
+    ANTHROPIC_API_KEY=k.trim();
+    localStorage.setItem('sue_map_ak',ANTHROPIC_API_KEY);
+    document.getElementById('ai-response').innerHTML='<span style="color:var(--active-green)">✓ API key saved. Ask your question!</span>';
+  } else if(k!==null){
+    alert('That does not look like an Anthropic key (should start with sk-ant…). Try again.');
+  }
+}
+function clearApiKey(){
+  localStorage.removeItem('sue_map_ak');ANTHROPIC_API_KEY='';
+  alert('API key cleared.');
+}
+
+// ═══════ TEXT TO SPEECH ═══════
+let speaking=false;
+function speakText(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,''));
+  utt.rate=0.95;utt.pitch=1;utt.volume=1;
+  const voices=window.speechSynthesis.getVoices();
+  const pref=voices.find(v=>v.lang==='en-US'&&v.name.includes('Female'))||voices.find(v=>v.lang==='en-US')||voices[0];
+  if(pref)utt.voice=pref;
+  utt.onstart=()=>{speaking=true;document.getElementById('speak-btn').textContent='⏹ Stop';}
+  utt.onend=()=>{speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
+  window.speechSynthesis.speak(utt);
+}
+function toggleSpeak(){
+  if(speaking){window.speechSynthesis.cancel();speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
+  else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
+}
+
 // ═══════ CLAUDE API ═══════
 async function submitQuery(){
   const q=document.getElementById('query-box').value.trim();if(!q)return;
@@ -789,7 +824,7 @@ async function submitQuery(){
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
   if(!ANTHROPIC_API_KEY){
-    resp.innerHTML='<span style="color:var(--accent2)">⚠️ Add your API key to enable AI responses.</span><br><br><span style="color:var(--muted);font-size:11px">Set <code>ANTHROPIC_API_KEY</code> at the top of the script.</span>';
+    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter API Key ›</button>';
     btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
   const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
@@ -821,7 +856,9 @@ Question: ${q}`;
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
     const data=await r.json();
     const text=data.content?.[0]?.text||'No response.';
-    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}`;
+    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
+    <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
+    speakText(text);
     const mentioned=Object.values(DAIL_DATA.states).map(s=>s.name).find(n=>text.includes(n));
     if(mentioned)selectState(mentioned);
   }catch(e){
