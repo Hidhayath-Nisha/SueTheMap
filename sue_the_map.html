@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const e=/Edg/.test(navigator.userAgent);
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
   initStats(); populateFilters(); renderUncovered(); renderSectors(); renderTimeline();
-  initVoice(); updateChips(); loadGlobe();
+  initVoice(); updateChips(); loadGlobe(); initKeyboard();
 });
 
 function animCount(id,target){
@@ -600,6 +600,25 @@ function buildCaseList(cases){
       <div class="cc-media">${dots}<span style="font-size:10px;color:var(--muted);margin-left:4px">${x.media_count===0?'No coverage':x.media_count+' source'+(x.media_count>1?'s':'')}</span></div>
       ${srcs}</div>`;
   }).join('');
+}
+
+// ═══════ KEYBOARD NAV ═══════
+function initKeyboard(){
+  const stList=Object.keys(DAIL_DATA.states);
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+      const i=selState?stList.indexOf(selState):-1;
+      const next=e.key==='ArrowRight'?stList[(i+1)%stList.length]:stList[(i-1+stList.length)%stList.length];
+      selectState(DAIL_DATA.states[next].name);
+    }
+    if(e.key==='Escape')resetGlobe();
+    if(e.key==='/'){
+      e.preventDefault();
+      document.getElementById('query-box').focus();
+      switchLeft('ai');
+    }
+  });
 }
 
 function shareApp(){
