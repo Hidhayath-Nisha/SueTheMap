@@ -172,6 +172,14 @@ select.fsel:focus{border-color:var(--law-blue);}
 @keyframes spin{to{transform:rotate(360deg);}}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px;}
+@media print{
+  #left-panel,#globe-container,#mode-toggle,#share-btn,#footer{display:none!important;}
+  #right-panel{width:100%;border:none;box-shadow:none;}
+  #right-body{overflow:visible;}
+  body,html{overflow:visible;height:auto;}
+  #main{height:auto;display:block;}
+  .case-card{break-inside:avoid;page-break-inside:avoid;}
+}
 """
 
 BODY = """\
