@@ -380,6 +380,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
   initStats(); populateFilters(); renderUncovered(); renderSectors(); renderTimeline();
   initVoice(); updateChips(); loadGlobe(); initKeyboard();
+  // Auto-select the state with most cases after globe loads
+  setTimeout(()=>{
+    const top=Object.entries(DAIL_DATA.states).sort((a,b)=>b[1].total-a[1].total)[0];
+    if(top) selectState(top[1].name);
+  },2500);
 });
 
 function animCount(id,target){
