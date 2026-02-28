@@ -153,6 +153,11 @@ select.fsel:focus{border-color:var(--law-blue);}
 .clr-sect-btn{width:100%;padding:8px 12px;background:rgba(220,38,38,.07);border:1.5px solid rgba(220,38,38,.3);
   border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:10px;font-family:'DM Sans',sans-serif;font-weight:600;}
 .clr-sect-btn:hover{background:rgba(220,38,38,.13);}
+#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.9);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}
+.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(59,130,246,0.45),rgba(189,50,46,0.8),rgba(220,20,20,0.9));margin-bottom:3px;}
+.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
 #footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #footer span{font-size:12px;color:var(--muted);}
@@ -246,6 +251,13 @@ select.fsel:focus{border-color:var(--law-blue);}
     </div>
     <div id="globeViz"></div>
     <div id="year-bar"></div>
+    <div id="legend">
+      <div class="leg-title">Cases per State</div>
+      <div class="leg-scale">
+        <div class="leg-grad"></div>
+        <div class="leg-labels"><span>0</span><span>Few</span><span>103+</span></div>
+      </div>
+    </div>
   </div>
   <div id="right-panel">
     <div id="right-tabs">
