@@ -168,6 +168,14 @@ select.fsel:focus{border-color:var(--law-blue);}
 @keyframes spin{to{transform:rotate(360deg);}}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px;}
+@media print{
+  #left-panel,#globe-container,#mode-toggle,#share-btn,#footer{display:none!important;}
+  #right-panel{width:100%;border:none;box-shadow:none;}
+  #right-body{overflow:visible;}
+  body,html{overflow:visible;height:auto;}
+  #main{height:auto;display:block;}
+  .case-card{break-inside:avoid;page-break-inside:avoid;}
+}
 """
 
 BODY = """\
@@ -176,6 +184,11 @@ BODY = """\
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Sue the Map: interactive AI litigation intelligence tool mapping 293 AI lawsuits across 34 US states from the DAIL database.">
+<meta property="og:title" content="Sue the Map — AI Litigation Intelligence">
+<meta property="og:description" content="293 AI lawsuits. 34 states. 139 uncovered. Explore the full landscape of US AI litigation.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#f4f6f9">
 <title>SUE THE MAP — AI Litigation Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -353,7 +366,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   const e=/Edg/.test(navigator.userAgent);
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
   initStats(); populateFilters(); renderUncovered(); renderSectors(); renderTimeline();
-  initVoice(); updateChips(); loadGlobe();
+  initVoice(); updateChips(); loadGlobe(); initKeyboard();
+  // Auto-select the state with most cases after globe loads
+  setTimeout(()=>{
+    const top=Object.entries(DAIL_DATA.states).sort((a,b)=>b[1].total-a[1].total)[0];
+    if(top) selectState(top[1].name);
+  },2500);
 });
 
 function animCount(id,target){
@@ -364,7 +382,8 @@ function animCount(id,target){
 function initStats(){
   const D=DAIL_DATA;
   animCount('gs-total',D.total_cases);
-  document.getElementById('gs-active').textContent=D.total_with_media;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  animCount('gs-active',totalActive);
   document.getElementById('gs-states').textContent=Object.keys(D.states).length;
   animCount('gs-uncov',D.total_uncovered_active);
   document.getElementById('ab-num').textContent=D.total_uncovered_active;
