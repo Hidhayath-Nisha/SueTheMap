@@ -30,10 +30,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(
   border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .25s;white-space:nowrap;}
 .mode-btn.law-active{background:var(--accent);color:#fff;}
 .mode-btn.pub-active{background:var(--accent2);color:#fff;}
-#share-btn{padding:7px 15px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;
-  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;}
-#share-btn:hover{background:var(--law-blue);color:#fff;border-color:var(--law-blue);}
-#share-btn.copied{background:var(--active-green);color:#fff;border-color:var(--active-green);}
 #global-stats{display:flex;gap:22px;margin-left:auto;flex-shrink:0;}
 .gstat{display:flex;flex-direction:column;align-items:center;}
 .gstat-num{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;}
@@ -160,7 +156,7 @@ select.fsel:focus{border-color:var(--law-blue);}
 .clr-sect-btn{width:100%;padding:8px 12px;background:rgba(220,38,38,.07);border:1.5px solid rgba(220,38,38,.3);
   border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:10px;font-family:'DM Sans',sans-serif;font-weight:600;}
 .clr-sect-btn:hover{background:rgba(220,38,38,.13);}
-#reset-btn{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;\n  z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;font-family:'DM Sans',sans-serif;}\n#reset-btn:hover{background:#fff;color:var(--text);box-shadow:0 3px 12px rgba(0,0,0,.15);}\n#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}\n.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}\n.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(59,130,246,0.5),rgba(189,50,46,0.8),rgba(220,20,20,0.95));margin-bottom:3px;}\n.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}\n#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
+#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #footer span{font-size:12px;color:var(--muted);}
 #footer a{color:var(--muted);text-decoration:none;}
@@ -197,7 +193,6 @@ CSS_PLACEHOLDER
     <button class="mode-btn law-active" id="law-btn" onclick="setMode('law')">⚖️ LAW MODE</button>
     <button class="mode-btn" id="pub-btn" onclick="setMode('public')">🌍 PUBLIC MODE</button>
   </div>
-  <button id="share-btn" onclick="shareApp()" title="Copy shareable link">🔗 Share</button>
   <div id="global-stats">
     <div class="gstat"><span class="gstat-num" id="gs-total" style="color:var(--text)">–</span><span class="gstat-lbl">Cases</span></div>
     <div class="gstat"><span class="gstat-num" id="gs-active" style="color:var(--active-green)">–</span><span class="gstat-lbl">Active</span></div>
@@ -268,14 +263,6 @@ CSS_PLACEHOLDER
     </div>
     <div id="globeViz"></div>
     <div id="year-bar"></div>
-    <button id="reset-btn" onclick="resetGlobe()">&#x27F3; Reset View</button>
-    <div id="legend">
-      <div class="leg-title">Cases per State</div>
-      <div class="leg-scale">
-        <div class="leg-grad"></div>
-        <div class="leg-labels"><span>0</span><span>Few</span><span>103+</span></div>
-      </div>
-    </div>
   </div>
   <div id="right-panel">
     <div id="right-tabs">
@@ -556,26 +543,6 @@ function buildCaseList(cases){
       <div class="cc-media">${dots}<span style="font-size:10px;color:var(--muted);margin-left:4px">${x.media_count===0?'No coverage':x.media_count+' source'+(x.media_count>1?'s':'')}</span></div>
       ${srcs}</div>`;
   }).join('');
-}
-
-function shareApp(){
-  const url=window.location.href+(selState?'#'+selState:'');
-  navigator.clipboard.writeText(url).then(()=>{
-    const b=document.getElementById('share-btn');
-    b.textContent='✓ Copied!';b.classList.add('copied');
-    setTimeout(()=>{b.textContent='🔗 Share';b.classList.remove('copied');},2000);
-  }).catch(()=>{
-    prompt('Copy this link:',window.location.href);
-  });
-}
-
-function resetGlobe(){
-  if(!globe)return;
-  globe.controls().autoRotate=true;
-  globe.pointOfView({lat:39.5,lng:-98.35,altitude:1.75},1000);
-  selState=null;
-  document.getElementById('state-placeholder').style.display='';
-  document.getElementById('state-briefing').innerHTML='';
 }
 
 // ═══════ TIMELINE ═══════
