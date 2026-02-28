@@ -421,7 +421,8 @@ function animCount(id,target){
 function initStats(){
   const D=DAIL_DATA;
   animCount('gs-total',D.total_cases);
-  document.getElementById('gs-active').textContent=D.total_with_media;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  animCount('gs-active',totalActive);
   document.getElementById('gs-states').textContent=Object.keys(D.states).length;
   animCount('gs-uncov',D.total_uncovered_active);
   document.getElementById('ab-num').textContent=D.total_uncovered_active;
