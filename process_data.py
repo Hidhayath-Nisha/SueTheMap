@@ -1,3 +1,19 @@
+"""
+process_data.py
+---------------
+Parses the DAIL (Database of AI Litigation) Excel files and outputs
+a structured dail_data.json for use in sue_the_map.html.
+
+Inputs:
+  - Case_Table_2026-Feb-21_1952.xlsx      (375 rows, 36 columns)
+  - Secondary_Source_Coverage_Table_2026-Feb-21_2058.xlsx (389 rows, 4 columns)
+
+Output:
+  - dail_data.json  (states, year_trends, sector_totals, summary stats)
+
+Usage:
+  python process_data.py
+"""
 import pandas as pd
 import json
 import re
@@ -7,6 +23,7 @@ cases_df = pd.read_excel('Case_Table_2026-Feb-21_1952.xlsx')
 media_df = pd.read_excel('Secondary_Source_Coverage_Table_2026-Feb-21_2058.xlsx')
 
 def clean(val):
+    """Return a stripped string from a cell value, or empty string if NaN."""
     if pd.isna(val): return ''
     return str(val).strip()
 
