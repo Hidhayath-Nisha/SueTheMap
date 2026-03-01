@@ -288,7 +288,7 @@ CSS_PLACEHOLDER
     <button class="mode-btn law-active" id="law-btn" onclick="openModePage('law')">⚖️ LAW MODE</button>
     <button class="mode-btn" id="pub-btn" onclick="openModePage('public')">🌍 PUBLIC MODE</button>
   </div>
-  <button id="share-btn" onclick="shareApp()" title="Copy shareable link">🔗 Share</button>
+  <button id="share-btn" onclick="shareApp()" title="Copy shareable link" style="display:none">🔗 Share</button>
   <div id="global-stats">
     <div class="gstat"><span class="gstat-num" id="gs-total" style="color:var(--text)">–</span><span class="gstat-lbl">Cases</span></div>
     <div class="gstat"><span class="gstat-num" id="gs-active" style="color:var(--active-green)">–</span><span class="gstat-lbl">Active</span></div>
@@ -624,15 +624,15 @@ function buildSpark(yrData){
 
 function buildCaseList(cases){
   let c=[...cases];
-  if(filters.status==='active')c=c.filter(x=>x.status.toLowerCase().includes('active'));
-  if(filters.status==='inactive')c=c.filter(x=>!x.status.toLowerCase().includes('active'));
+  if(filters.status==='active')c=c.filter(x=>x.status.toLowerCase()==='active');
+  if(filters.status==='inactive')c=c.filter(x=>x.status.toLowerCase()==='inactive');
   if(activeSect)c=c.filter(x=>x.sector===activeSect);
   if(activeYr)c=c.filter(x=>x.year&&String(x.year)===activeYr);
   if(filters.cls==='yes')c=c.filter(x=>x.class_action);
   if(filters.cls==='no')c=c.filter(x=>!x.class_action);
   if(!c.length)return '<div style="text-align:center;color:var(--muted);padding:16px;font-size:11px">No cases match current filters</div>';
   return c.slice(0,30).map(x=>{
-    const ia=x.status.toLowerCase().includes('active');
+    const ia=x.status.toLowerCase()==='active';
     const sb=ia?`<span class="badge b-active">${mode==='law'?'Active':'In Court'}</span>`:`<span class="badge b-inactive">${mode==='law'?'Inactive':'Settled'}</span>`;
     const cb=x.class_action?`<span class="badge b-class">${mode==='law'?'Class Action':'Group Case'}</span>`:'';
     const sectb=`<span class="badge b-sector">${sl(x.sector)}</span>`;
@@ -771,7 +771,7 @@ function renderUncovered(){
   const cases=[];
   for(const[a,sd]of Object.entries(DAIL_DATA.states)){
     for(const c of sd.cases){
-      if(c.media_count===0&&c.status.toLowerCase().includes('active')){
+      if(c.media_count===0&&c.status.toLowerCase()==='active'){
         cases.push({...c,stAbbr:a,stName:sd.name});
       }
     }

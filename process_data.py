@@ -99,7 +99,7 @@ for _, row in cases_df.iterrows():
 
     record_num = row['Record_Number']
     status = clean(row['Status_Disposition'])
-    is_active = 'active' in status.lower()
+    is_active = status.strip().lower() == 'active'
     year = parse_year(row['Date_Action_Filed'])
     sector = parse_sector(row['Area_of_Application_List'])
     media_count = int(media_counts.get(record_num, 0))
