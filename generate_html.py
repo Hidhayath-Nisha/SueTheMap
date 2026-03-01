@@ -203,26 +203,26 @@ select.fsel:focus{border-color:var(--law-blue);}
 @keyframes mpIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
 #mp-header{position:sticky;top:0;background:var(--surface);border-bottom:2px solid var(--border);
   padding:16px 32px;display:flex;align-items:center;justify-content:space-between;z-index:10;gap:16px;}
-#mp-title{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--text);letter-spacing:1px;}
-#mp-subtitle{font-size:14px;color:var(--muted);margin-top:2px;}
-#mp-close{background:none;border:1px solid var(--border);border-radius:8px;padding:9px 22px;
-  cursor:pointer;font-size:15px;color:var(--text);font-family:'DM Sans',sans-serif;flex-shrink:0;}
+#mp-title{font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--text);letter-spacing:1px;}
+#mp-subtitle{font-size:15px;color:var(--muted);margin-top:2px;}
+#mp-close{background:none;border:1px solid var(--border);border-radius:8px;padding:10px 24px;
+  cursor:pointer;font-size:16px;color:var(--text);font-family:'DM Sans',sans-serif;flex-shrink:0;}
 #mp-close:hover{background:var(--surface2);}
-#mp-body{padding:28px 32px;max-width:1200px;margin:0 auto;}
+#mp-body{padding:28px 32px;max-width:1200px;margin:0 auto;font-size:15px;}
 .mp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
 .mp-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
-.mp-stat-num{font-family:'DM Mono',monospace;font-size:36px;font-weight:700;line-height:1;}
-.mp-stat-lbl{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;}
+.mp-stat-num{font-family:'DM Mono',monospace;font-size:40px;font-weight:700;line-height:1;}
+.mp-stat-lbl{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:7px;}
 .mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-.mp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;}
-.mp-card-title{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
-  font-weight:600;margin-bottom:16px;}
-.mp-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.mp-bar-label{font-size:14px;color:var(--text);width:130px;flex-shrink:0;
+.mp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;}
+.mp-card-title{font-size:14px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  font-weight:600;margin-bottom:18px;}
+.mp-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.mp-bar-label{font-size:15px;color:var(--text);width:140px;flex-shrink:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mp-bar-track{flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;}
-.mp-bar-fill{height:100%;border-radius:5px;}
-.mp-bar-val{font-size:13px;color:var(--muted);font-family:'DM Mono',monospace;width:32px;text-align:right;}
+.mp-bar-track{flex:1;height:11px;background:var(--surface2);border-radius:6px;overflow:hidden;}
+.mp-bar-fill{height:100%;border-radius:6px;}
+.mp-bar-val{font-size:14px;color:var(--muted);font-family:'DM Mono',monospace;width:34px;text-align:right;}
 .mp-year-bar{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:12px;padding-bottom:2px;}
 .mp-yr-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
 .mp-yr-fill{width:100%;border-radius:3px 3px 0 0;min-height:3px;}
@@ -232,29 +232,32 @@ select.fsel:focus{border-color:var(--law-blue);}
   border-left:3px solid var(--accent2);}
 .mp-story-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
 .mp-story-meta{font-size:13px;color:var(--muted);line-height:1.6;}
-.mp-case-table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px;}
-.mp-case-table th{text-align:left;padding:9px 10px;font-size:12px;text-transform:uppercase;
+.mp-case-table{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px;}
+.mp-case-table th{text-align:left;padding:10px 10px;font-size:13px;text-transform:uppercase;
   letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;}
-.mp-case-table td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
-.mp-case-table tr:hover td{background:var(--surface2);}
-.mp-case-caption{font-weight:600;color:var(--text);margin-bottom:4px;font-size:14px;}
-.mp-case-desc{font-size:13px;color:var(--muted);line-height:1.6;
+.mp-case-table td{padding:13px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+.mp-case-table tr.case-main:hover td{background:var(--surface2);cursor:pointer;}
+.mp-case-caption{font-weight:600;color:var(--text);margin-bottom:5px;font-size:15px;}
+.mp-case-desc{font-size:14px;color:var(--muted);line-height:1.6;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.mp-case-sig{font-size:12px;color:var(--law-blue);font-style:italic;margin-top:4px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.mp-badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:12px;font-weight:600;}
+.mp-case-sig{font-size:13px;color:var(--law-blue);font-style:italic;margin-top:5px;}
+.mp-expand-row td{background:var(--surface2);padding:18px 22px!important;border-bottom:2px solid var(--border);}
+.mp-expand-body{font-size:14px;line-height:1.75;color:var(--text);}
+.mp-expand-label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-top:14px;margin-bottom:5px;}
+.mp-read-more{font-size:13px;color:var(--law-blue);cursor:pointer;margin-top:4px;display:inline-block;border:none;background:none;padding:0;font-family:'DM Sans',sans-serif;}
+.mp-badge{display:inline-block;padding:4px 10px;border-radius:10px;font-size:13px;font-weight:600;}
 .badge-active{background:#dcfce7;color:#15803d;}
 .badge-inactive{background:#f1f5f9;color:#64748b;}
 .badge-uncov{background:#fff7ed;color:#c2410c;}
 .mp-filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
-.mp-fsel{border:1px solid var(--border);border-radius:7px;padding:8px 12px;
-  font-size:14px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;cursor:pointer;}
+.mp-fsel{border:1px solid var(--border);border-radius:7px;padding:9px 14px;
+  font-size:15px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;cursor:pointer;}
 .mp-pub-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:20px;border-left:4px solid var(--accent2);}
-.mp-pub-card-head{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
-.mp-pub-card-meta{font-size:13px;color:var(--muted);margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap;}
-.mp-pub-card-desc{font-size:14px;color:#334155;line-height:1.7;margin-bottom:10px;}
-.mp-pub-card-sig{font-size:13px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:9px;margin-top:6px;}
+  padding:22px;border-left:4px solid var(--accent2);}
+.mp-pub-card-head{font-size:17px;font-weight:700;color:var(--text);margin-bottom:7px;}
+.mp-pub-card-meta{font-size:14px;color:var(--muted);margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap;}
+.mp-pub-card-desc{font-size:15px;color:#334155;line-height:1.75;margin-bottom:10px;}
+.mp-pub-card-sig{font-size:14px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:8px;}
 """
 
 BODY = """\
@@ -1096,19 +1099,40 @@ function filterLawCases(){
   const tbody=document.getElementById('law-case-tbody');
   if(!tbody)return;
   document.getElementById('lf-count').textContent=`${cases.length} case${cases.length!==1?'s':''}`;
-  tbody.innerHTML=cases.map(c=>`<tr>
+  tbody.innerHTML=cases.map((c,i)=>{
+    const rowId=`cr-${i}`;
+    const hasMore=(c.description&&c.description.length>0)||c.issues||c.significance||c.orgs;
+    return `<tr class="case-main" onclick="toggleCase('${rowId}')">
     <td>
       <div class="mp-case-caption">${c.caption||'—'}</div>
-      ${c.description?`<div class="mp-case-desc">${c.description}</div>`:''}
-      ${c.significance?`<div class="mp-case-sig">⚖ ${c.significance}</div>`:''}
+      ${c.description?`<div class="mp-case-desc">${c.description}</div>`:''}${hasMore?`<button class="mp-read-more" onclick="event.stopPropagation();toggleCase('${rowId}')">+ Read full story</button>`:''}
     </td>
     <td style="white-space:nowrap">${c.state||'—'}</td>
     <td style="white-space:nowrap;font-family:'DM Mono',monospace">${c.year||'—'}</td>
-    <td style="white-space:nowrap;font-size:11px;color:var(--muted)">${c.sector||'—'}</td>
+    <td style="white-space:nowrap;font-size:13px;color:var(--muted)">${c.sector||'—'}</td>
     <td><span class="mp-badge ${c.status==='Active'?'badge-active':'badge-inactive'}">${c.status||'—'}</span></td>
     <td style="text-align:center;font-family:'DM Mono',monospace">${c.media_count===0?'<span class="mp-badge badge-uncov">None</span>':c.media_count}</td>
     <td style="text-align:center">${c.class_action?'Yes':'No'}</td>
-  </tr>`).join('');
+  </tr>
+  <tr id="${rowId}" class="mp-expand-row" style="display:none">
+    <td colspan="7">
+      <div class="mp-expand-body">
+        ${c.description?`<div class="mp-expand-label">What Happened</div><div>${c.description}</div>`:''}
+        ${c.significance?`<div class="mp-expand-label">Why It Matters</div><div style="color:var(--law-blue)">${c.significance}</div>`:''}
+        ${c.issues?`<div class="mp-expand-label">Legal Issues</div><div style="color:var(--muted)">${c.issues}</div>`:''}
+        ${c.orgs?`<div class="mp-expand-label">Organizations</div><div style="color:var(--muted)">${c.orgs}</div>`:''}
+      </div>
+    </td>
+  </tr>`;
+  }).join('');
+}
+function toggleCase(id){
+  const row=document.getElementById(id);
+  if(!row)return;
+  const open=row.style.display!=='none';
+  row.style.display=open?'none':'table-row';
+  const btn=row.previousElementSibling?.querySelector('.mp-read-more');
+  if(btn)btn.textContent=open?'+ Read full story':'\u2212 Collapse';
 }
 function renderPublicPage(){
   const D=DAIL_DATA;
@@ -1148,7 +1172,7 @@ function renderPublicPage(){
           <span>🏭 ${c.sector||'Unknown sector'}</span>
           ${c.class_action?'<span style="color:var(--law-blue);font-weight:600">Class Action</span>':''}
         </div>
-        ${c.description?`<div class="mp-pub-card-desc">${c.description.slice(0,400)}${c.description.length>400?'\u2026':''}</div>`:''}
+        ${c.description?`<div class="mp-pub-card-desc">${c.description}</div>`:''}
         ${c.significance?`<div class="mp-pub-card-sig">Why it matters: ${c.significance}</div>`:''}
       </div>`).join('')}
     </div>
