@@ -168,6 +168,14 @@ select.fsel:focus{border-color:var(--law-blue);}
 @keyframes spin{to{transform:rotate(360deg);}}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px;}
+@media print{
+  #left-panel,#globe-container,#mode-toggle,#share-btn,#footer{display:none!important;}
+  #right-panel{width:100%;border:none;box-shadow:none;}
+  #right-body{overflow:visible;}
+  body,html{overflow:visible;height:auto;}
+  #main{height:auto;display:block;}
+  .case-card{break-inside:avoid;page-break-inside:avoid;}
+}
 """
 
 BODY = """\
@@ -176,6 +184,11 @@ BODY = """\
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Sue the Map: interactive AI litigation intelligence tool mapping 293 AI lawsuits across 34 US states from the DAIL database.">
+<meta property="og:title" content="Sue the Map — AI Litigation Intelligence">
+<meta property="og:description" content="293 AI lawsuits. 34 states. 139 uncovered. Explore the full landscape of US AI litigation.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#f4f6f9">
 <title>SUE THE MAP — AI Litigation Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -216,6 +229,10 @@ CSS_PLACEHOLDER
           <svg viewBox="0 0 24 24"><path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V6zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
         </div>
         <div id="mic-status">Click 🎙 to speak your question</div>
+      <div style="font-size:10px;color:#94a3b8;text-align:center;margin-top:4px">
+        <kbd style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:9px">/</kbd> to focus search &nbsp;
+        <kbd style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:9px">←→</kbd> cycle states
+      </div>
       </div>
       <textarea id="query-box" placeholder="e.g. Which states have facial recognition cases with no media coverage?"></textarea>
       <button id="query-btn" onclick="submitQuery()">Ask AI ›</button>
@@ -296,7 +313,7 @@ CSS_PLACEHOLDER
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
 <script>
-const ANTHROPIC_API_KEY = '';
+let GEMINI_API_KEY = localStorage.getItem('sue_map_gk') || '';
 """
 
 JS = """\
@@ -353,7 +370,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   const e=/Edg/.test(navigator.userAgent);
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
   initStats(); populateFilters(); renderUncovered(); renderSectors(); renderTimeline();
-  initVoice(); updateChips(); loadGlobe();
+  initVoice(); updateChips(); loadGlobe(); initKeyboard();
+  // Auto-select the state with most cases after globe loads
+  setTimeout(()=>{
+    const top=Object.entries(DAIL_DATA.states).sort((a,b)=>b[1].total-a[1].total)[0];
+    if(top) selectState(top[1].name);
+  },2500);
 });
 
 function animCount(id,target){
@@ -364,7 +386,8 @@ function animCount(id,target){
 function initStats(){
   const D=DAIL_DATA;
   animCount('gs-total',D.total_cases);
-  document.getElementById('gs-active').textContent=D.total_with_media;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  animCount('gs-active',totalActive);
   document.getElementById('gs-states').textContent=Object.keys(D.states).length;
   animCount('gs-uncov',D.total_uncovered_active);
   document.getElementById('ab-num').textContent=D.total_uncovered_active;
@@ -545,6 +568,44 @@ function buildCaseList(cases){
   }).join('');
 }
 
+// ═══════ KEYBOARD NAV ═══════
+function initKeyboard(){
+  const stList=Object.keys(DAIL_DATA.states);
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+      const i=selState?stList.indexOf(selState):-1;
+      const next=e.key==='ArrowRight'?stList[(i+1)%stList.length]:stList[(i-1+stList.length)%stList.length];
+      selectState(DAIL_DATA.states[next].name);
+    }
+    if(e.key==='Escape')resetGlobe();
+    if(e.key==='/'){
+      e.preventDefault();
+      document.getElementById('query-box').focus();
+      switchLeft('ai');
+    }
+  });
+}
+
+function shareApp(){
+  const url=window.location.href+(selState?'#'+selState:'');
+  navigator.clipboard.writeText(url).then(()=>{
+    const b=document.getElementById('share-btn');
+    b.textContent='✓ Copied!';b.classList.add('copied');
+    setTimeout(()=>{b.textContent='🔗 Share';b.classList.remove('copied');},2000);
+  }).catch(()=>{
+    prompt('Copy this link:',window.location.href);
+  });
+}
+
+function resetGlobe(){
+  if(!globe)return;
+  globe.controls().autoRotate=true;
+  globe.pointOfView({lat:39.5,lng:-98.35,altitude:1.75},1000);
+  selState=null;
+  document.getElementById('state-placeholder').style.display='';
+  document.getElementById('state-briefing').innerHTML='';
+}
 // ═══════ TIMELINE ═══════
 function renderTimeline(){
   const ct=document.getElementById('timeline-chart');if(!ct)return;
@@ -706,15 +767,50 @@ function updateChips(){
 
 function useChip(el){document.getElementById('query-box').value=el.dataset.q;submitQuery();}
 
-// ═══════ CLAUDE API ═══════
+// ═══════ API KEY MANAGEMENT ═══════
+function setApiKey(){
+  const k=prompt('Paste your Google Gemini API key (stored locally in your browser only):');
+  if(k&&k.trim().startsWith('AIza')){
+    GEMINI_API_KEY=k.trim();
+    localStorage.setItem('sue_map_gk',GEMINI_API_KEY);
+    document.getElementById('ai-response').innerHTML='<span style="color:var(--active-green)">✓ API key saved. Ask your question!</span>';
+  } else if(k!==null){
+    alert('That does not look like a Gemini key (should start with AIza…). Try again.');
+  }
+}
+function clearApiKey(){
+  localStorage.removeItem('sue_map_gk');GEMINI_API_KEY='';
+  alert('API key cleared.');
+}
+
+// ═══════ TEXT TO SPEECH ═══════
+let speaking=false;
+function speakText(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,''));
+  utt.rate=0.95;utt.pitch=1;utt.volume=1;
+  const voices=window.speechSynthesis.getVoices();
+  const pref=voices.find(v=>v.lang==='en-US'&&v.name.includes('Female'))||voices.find(v=>v.lang==='en-US')||voices[0];
+  if(pref)utt.voice=pref;
+  utt.onstart=()=>{speaking=true;document.getElementById('speak-btn').textContent='⏹ Stop';}
+  utt.onend=()=>{speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
+  window.speechSynthesis.speak(utt);
+}
+function toggleSpeak(){
+  if(speaking){window.speechSynthesis.cancel();speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
+  else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
+}
+
+// ═══════ GEMINI API ═══════
 async function submitQuery(){
   const q=document.getElementById('query-box').value.trim();if(!q)return;
   const btn=document.getElementById('query-btn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
-  if(!ANTHROPIC_API_KEY){
-    resp.innerHTML='<span style="color:var(--accent2)">⚠️ Add your API key to enable AI responses.</span><br><br><span style="color:var(--muted);font-size:11px">Set <code>ANTHROPIC_API_KEY</code> at the top of the script.</span>';
+  if(!GEMINI_API_KEY){
+    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Gemini Key ›</button>';
     btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
   const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
@@ -728,25 +824,21 @@ ${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
 Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
 Question: ${q}`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':ANTHROPIC_API_KEY,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:400,
-        system:mode==='law'?lSys:pSys,
-        messages:[{role:'user',content:ctx}]
+        system_instruction:{parts:[{text:mode==='law'?lSys:pSys}]},
+        contents:[{role:'user',parts:[{text:ctx}]}],
+        generationConfig:{maxOutputTokens:400}
       })
     });
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
     const data=await r.json();
-    const text=data.content?.[0]?.text||'No response.';
-    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}`;
+    const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
+    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
+    <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
+    speakText(text);
     const mentioned=Object.values(DAIL_DATA.states).map(s=>s.name).find(n=>text.includes(n));
     if(mentioned)selectState(mentioned);
   }catch(e){
