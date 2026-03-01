@@ -232,6 +232,29 @@ select.fsel:focus{border-color:var(--law-blue);}
   border-left:3px solid var(--accent2);}
 .mp-story-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;}
 .mp-story-meta{font-size:11px;color:var(--muted);line-height:1.5;}
+.mp-case-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+.mp-case-table th{text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;}
+.mp-case-table td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+.mp-case-table tr:hover td{background:var(--surface2);}
+.mp-case-caption{font-weight:600;color:var(--text);margin-bottom:3px;}
+.mp-case-desc{font-size:11px;color:var(--muted);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.mp-case-sig{font-size:11px;color:var(--law-blue);font-style:italic;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.mp-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
+.badge-active{background:#dcfce7;color:#15803d;}
+.badge-inactive{background:#f1f5f9;color:#64748b;}
+.badge-uncov{background:#fff7ed;color:#c2410c;}
+.mp-filter-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.mp-fsel{border:1px solid var(--border);border-radius:7px;padding:6px 10px;
+  font-size:12px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;cursor:pointer;}
+.mp-pub-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px;border-left:4px solid var(--accent2);}
+.mp-pub-card-head{font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px;}
+.mp-pub-card-meta{font-size:11px;color:var(--muted);margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap;}
+.mp-pub-card-desc{font-size:12px;color:#334155;line-height:1.65;margin-bottom:8px;}
+.mp-pub-card-sig{font-size:11px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:7px;margin-top:4px;}
 """
 
 BODY = """\
@@ -978,6 +1001,7 @@ function renderLawPage(){
   const years=Object.entries(D.year_trends).filter(([y])=>parseInt(y)>=2015).sort(([a],[b])=>a-b);
   const covGap=Object.entries(D.states).filter(([,s])=>s.uncovered_active>0)
     .sort((a,b)=>b[1].uncovered_active-a[1].uncovered_active).slice(0,8);
+  const allCases=Object.values(D.states).flatMap(s=>s.cases||[]);
   document.getElementById('mp-body').innerHTML=`
   <div class="mp-stats">
     <div class="mp-stat"><div class="mp-stat-num" style="color:var(--text)">${D.total_cases}</div><div class="mp-stat-lbl">Total AI Cases (2011\u20132026)</div></div>
@@ -1016,15 +1040,84 @@ function renderLawPage(){
         </tbody>
       </table>
     </div>
+  </div>
+  <div class="mp-card" style="margin-top:18px">
+    <div class="mp-card-title">All Cases \u2014 Full Litigation Index (${allCases.length})</div>
+    <div class="mp-filter-row">
+      <select class="mp-fsel" id="lf-status" onchange="filterLawCases()">
+        <option value="">All Statuses</option>
+        <option value="Active">Active Only</option>
+        <option value="Inactive">Inactive Only</option>
+      </select>
+      <select class="mp-fsel" id="lf-sector" onchange="filterLawCases()">
+        <option value="">All Sectors</option>
+        ${Object.keys(D.sector_totals).sort().map(s=>`<option value="${s}">${s}</option>`).join('')}
+      </select>
+      <select class="mp-fsel" id="lf-year" onchange="filterLawCases()">
+        <option value="">All Years</option>
+        ${Object.keys(D.year_trends).sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join('')}
+      </select>
+      <select class="mp-fsel" id="lf-cov" onchange="filterLawCases()">
+        <option value="">Any Coverage</option>
+        <option value="0">No Media Coverage</option>
+      </select>
+      <span id="lf-count" style="font-size:12px;color:var(--muted);align-self:center;margin-left:4px"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="mp-case-table" id="law-case-table">
+        <thead><tr>
+          <th style="min-width:220px">Case</th>
+          <th>State</th>
+          <th>Year</th>
+          <th>Sector</th>
+          <th>Status</th>
+          <th>Media</th>
+          <th>Class Action</th>
+        </tr></thead>
+        <tbody id="law-case-tbody"></tbody>
+      </table>
+    </div>
   </div>`;
+  window._lawCases=allCases;
+  filterLawCases();
+}
+function filterLawCases(){
+  const status=document.getElementById('lf-status')?.value||'';
+  const sector=document.getElementById('lf-sector')?.value||'';
+  const year=document.getElementById('lf-year')?.value||'';
+  const cov=document.getElementById('lf-cov')?.value||'';
+  let cases=(window._lawCases||[]).filter(c=>{
+    if(status&&c.status!==status)return false;
+    if(sector&&c.sector!==sector)return false;
+    if(year&&String(c.year)!==year)return false;
+    if(cov==='0'&&c.media_count>0)return false;
+    return true;
+  });
+  const tbody=document.getElementById('law-case-tbody');
+  if(!tbody)return;
+  document.getElementById('lf-count').textContent=`${cases.length} case${cases.length!==1?'s':''}`;
+  tbody.innerHTML=cases.map(c=>`<tr>
+    <td>
+      <div class="mp-case-caption">${c.caption||'—'}</div>
+      ${c.description?`<div class="mp-case-desc">${c.description}</div>`:''}
+      ${c.significance?`<div class="mp-case-sig">⚖ ${c.significance}</div>`:''}
+    </td>
+    <td style="white-space:nowrap">${c.state||'—'}</td>
+    <td style="white-space:nowrap;font-family:'DM Mono',monospace">${c.year||'—'}</td>
+    <td style="white-space:nowrap;font-size:11px;color:var(--muted)">${c.sector||'—'}</td>
+    <td><span class="mp-badge ${c.status==='Active'?'badge-active':'badge-inactive'}">${c.status||'—'}</span></td>
+    <td style="text-align:center;font-family:'DM Mono',monospace">${c.media_count===0?'<span class="mp-badge badge-uncov">None</span>':c.media_count}</td>
+    <td style="text-align:center">${c.class_action?'Yes':'No'}</td>
+  </tr>`).join('');
 }
 function renderPublicPage(){
   const D=DAIL_DATA;
   const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
   const years=Object.entries(D.year_trends).filter(([y])=>parseInt(y)>=2015).sort(([a],[b])=>a-b);
-  const uncovStates=Object.entries(D.states).filter(([,s])=>s.uncovered_active>0)
-    .sort((a,b)=>b[1].uncovered_active-a[1].uncovered_active).slice(0,6);
   const topSectors=Object.entries(D.sector_totals).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const uncovCases=Object.values(D.states)
+    .flatMap(s=>(s.cases||[]).filter(c=>c.status==='Active'&&c.media_count===0))
+    .sort((a,b)=>(b.year||0)-(a.year||0));
   document.getElementById('mp-body').innerHTML=`
   <div class="mp-stats">
     <div class="mp-stat"><div class="mp-stat-num" style="color:var(--text)">${D.total_cases}</div><div class="mp-stat-lbl">AI Lawsuits Filed in the US</div></div>
@@ -1033,17 +1126,6 @@ function renderPublicPage(){
     <div class="mp-stat"><div class="mp-stat-num" style="color:var(--law-blue)">${Object.keys(D.states).length}</div><div class="mp-stat-lbl">States Affected</div></div>
   </div>
   <div class="mp-grid">
-    <div class="mp-card" style="grid-column:1/-1">
-      <div class="mp-card-title">\u26a0 The Stories Nobody Is Writing</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">These states have active AI lawsuits with <strong>zero media coverage</strong>. Real cases. Real people. No reporters.</p>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        ${uncovStates.map(([c,s])=>`<div class="mp-story-card">
-          <div class="mp-story-title">${s.name||c}</div>
-          <div class="mp-story-meta">${s.uncovered_active} unreported active case${s.uncovered_active>1?'s':''}</div>
-          <div class="mp-story-meta">${s.active} active \u00b7 ${s.total} total filed</div>
-        </div>`).join('')}
-      </div>
-    </div>
     <div class="mp-card">
       <div class="mp-card-title">Which industries are getting sued most?</div>
       ${topSectors.map(([n,v])=>_bar(n,v,topSectors[0][1],'var(--accent2)')).join('')}
@@ -1052,6 +1134,23 @@ function renderPublicPage(){
       <div class="mp-card-title">Is it getting worse? Lawsuits filed each year</div>
       <div class="mp-year-bar">${_yrBars(years,'var(--accent)')}</div>
       <p style="font-size:11px;color:var(--muted);margin-top:12px">Filings surged after 2022 \u2014 when mainstream AI tools launched and people began suing.</p>
+    </div>
+  </div>
+  <div class="mp-card" style="margin-top:18px">
+    <div class="mp-card-title">\u26a0 Stories Nobody Is Writing \u2014 ${uncovCases.length} Active Cases With Zero Media Coverage</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px">These are real lawsuits happening right now. No reporters. No press. Just people in court fighting AI companies.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${uncovCases.map(c=>`<div class="mp-pub-card">
+        <div class="mp-pub-card-head">${c.caption||'Unnamed Case'}</div>
+        <div class="mp-pub-card-meta">
+          <span>📍 ${c.state||'Unknown'}</span>
+          <span>📅 Filed ${c.year||'?'}</span>
+          <span>🏭 ${c.sector||'Unknown sector'}</span>
+          ${c.class_action?'<span style="color:var(--law-blue);font-weight:600">Class Action</span>':''}
+        </div>
+        ${c.description?`<div class="mp-pub-card-desc">${c.description.slice(0,400)}${c.description.length>400?'\u2026':''}</div>`:''}
+        ${c.significance?`<div class="mp-pub-card-sig">Why it matters: ${c.significance}</div>`:''}
+      </div>`).join('')}
     </div>
   </div>`;
 }
