@@ -576,12 +576,6 @@ function initGlobe(){
     .polygonAltitude(d=>getAlt(d.properties.name))
     .polygonLabel(d=>ttHtml(d))
     .onPolygonClick(d=>selectState(d.properties.name))
-    .onPolygonHover(d=>{
-      globe.polygonCapColor(dd=>{
-        if(!d)return stateCol(dd.properties.name);
-        return dd===d?'rgba(255,200,0,0.85)':stateCol(dd.properties.name);
-      });
-    })
     .pointOfView({lat:39.5,lng:-98.35,altitude:1.75},1200);
   globe.controls().autoRotate=true;
   globe.controls().autoRotateSpeed=0.3;
