@@ -176,7 +176,7 @@ select.fsel:focus{border-color:var(--law-blue);}
 .clr-sect-btn{width:100%;padding:8px 12px;background:rgba(220,38,38,.07);border:1.5px solid rgba(220,38,38,.3);
   border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:10px;font-family:'DM Sans',sans-serif;font-weight:600;}
 .clr-sect-btn:hover{background:rgba(220,38,38,.13);}
-#reset-btn{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;\n  z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;font-family:'DM Sans',sans-serif;}\n#reset-btn:hover{background:#fff;color:var(--text);box-shadow:0 3px 12px rgba(0,0,0,.15);}\n#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}\n.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}\n.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(59,130,246,0.5),rgba(189,50,46,0.8),rgba(220,20,20,0.95));margin-bottom:3px;}\n.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}\n#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
+#reset-btn{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;\n  z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;font-family:'DM Sans',sans-serif;}\n#reset-btn:hover{background:#fff;color:var(--text);box-shadow:0 3px 12px rgba(0,0,0,.15);}\n#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}\n.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}\n.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(148,163,184,0.82),rgba(250,204,21,0.92),rgba(235,80,20,0.94),rgba(185,10,10,0.97));margin-bottom:3px;}\n.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}\n#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #footer span{font-size:12px;color:var(--muted);}
 #footer a{color:var(--muted);text-decoration:none;}
@@ -505,19 +505,18 @@ function maxCntContext(){
 
 function stateCol(name){
   const cnt=cntForState(name);
-  if(cnt===0)return 'rgba(71,85,105,0.55)';
+  if(cnt===0)return 'rgba(148,163,184,0.82)';  // solid slate — clearly visible, neutral
   const t=Math.min(cnt/maxCntContext(),1);
-  // white-blue → blue → orange → deep red, all high opacity
-  if(t<0.12)return `rgba(147,197,253,0.85)`;
-  if(t<0.3){const tt=(t-.12)/.18;return `rgba(${Math.round(147-88*tt)},${Math.round(197-97*tt)},${Math.round(253-7*tt)},0.88)`;}
-  if(t<0.55){const tt=(t-.3)/.25;return `rgba(${Math.round(59+196*tt)},${Math.round(100-80*tt)},${Math.round(246-220*tt)},0.90)`;}
-  if(t<0.8){const tt=(t-.55)/.25;return `rgba(${Math.round(255)},${Math.round(20+60*(1-tt))},20,0.92)`;}
+  // low → yellow-green, mid → orange, high → deep red, all fully opaque
+  if(t<0.15)return `rgba(250,204,21,0.92)`;          // yellow
+  if(t<0.35){const tt=(t-.15)/.2;return `rgba(${Math.round(250-15*tt)},${Math.round(204-134*tt)},${Math.round(21)},0.93)`;} // yellow→orange
+  if(t<0.65){const tt=(t-.35)/.3;return `rgba(${Math.round(235+10*tt)},${Math.round(70-50*tt)},20,0.94)`;} // orange→red
   return 'rgba(185,10,10,0.97)';
 }
 
 function getAlt(name){
   const cnt=cntForState(name),mx=maxCntContext();
-  return cnt===0?0.002:0.006+(cnt/mx)*0.04;
+  return cnt===0?0.01:0.012+(cnt/mx)*0.05;
 }
 
 function ttHtml(d){
