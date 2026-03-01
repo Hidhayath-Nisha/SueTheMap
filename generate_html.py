@@ -176,7 +176,7 @@ select.fsel:focus{border-color:var(--law-blue);}
 .clr-sect-btn{width:100%;padding:8px 12px;background:rgba(220,38,38,.07);border:1.5px solid rgba(220,38,38,.3);
   border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:10px;font-family:'DM Sans',sans-serif;font-weight:600;}
 .clr-sect-btn:hover{background:rgba(220,38,38,.13);}
-#reset-btn{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;\n  z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;font-family:'DM Sans',sans-serif;}\n#reset-btn:hover{background:#fff;color:var(--text);box-shadow:0 3px 12px rgba(0,0,0,.15);}\n#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}\n.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}\n.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(254,226,226,0.85),rgba(239,68,68,0.93),rgba(127,0,0,0.98));margin-bottom:3px;}\n.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}\n#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
+#reset-btn{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;\n  z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;font-family:'DM Sans',sans-serif;}\n#reset-btn:hover{background:#fff;color:var(--text);box-shadow:0 3px 12px rgba(0,0,0,.15);}\n#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}\n.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}\n.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(59,130,246,0.55),rgba(139,92,246,0.8),rgba(220,38,38,0.95));margin-bottom:3px;}\n.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}\n#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #footer span{font-size:12px;color:var(--muted);}
 #footer a{color:var(--muted);text-decoration:none;}
@@ -505,19 +505,19 @@ function maxCntContext(){
 
 function stateCol(name){
   const cnt=cntForState(name);
-  if(cnt===0)return 'rgba(203,213,225,0.55)';  // muted slate, barely raised above globe
+  if(cnt===0)return 'rgba(148,197,255,0.12)'; // near-invisible, let earth show
   const t=Math.min(cnt/maxCntContext(),1);
-  // light blush → rose → red → deep crimson
-  const r=Math.round(254-77*t);
-  const g=Math.round(226-198*t);
-  const b=Math.round(226-226*t);
-  const a=(0.82+t*0.16).toFixed(2);
+  // blue(59,130,246) → purple(139,92,246) → red(220,38,38)
+  let r,g,b;
+  if(t<0.5){const tt=t/0.5;r=Math.round(59+80*tt);g=Math.round(130-38*tt);b=Math.round(246);}
+  else{const tt=(t-0.5)/0.5;r=Math.round(139+81*tt);g=Math.round(92-54*tt);b=Math.round(246-208*tt);}
+  const a=(0.55+t*0.40).toFixed(2);
   return `rgba(${r},${g},${b},${a})`;
 }
 
 function getAlt(name){
   const cnt=cntForState(name),mx=maxCntContext();
-  return cnt===0?0.01:0.012+(cnt/mx)*0.05;
+  return cnt===0?0.002:0.008+(cnt/mx)*0.04;
 }
 
 function ttHtml(d){
@@ -546,7 +546,7 @@ function initGlobe(){
     .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
     .polygonsData(statesGeo.features)
     .polygonCapColor(d=>stateCol(d.properties.name))
-    .polygonSideColor(d=>{const cnt=cntForState(d.properties.name);return cnt===0?'rgba(71,85,105,0.3)':'rgba(150,0,0,0.5)';})
+    .polygonSideColor(d=>{const cnt=cntForState(d.properties.name);return cnt===0?'rgba(0,0,0,0)':'rgba(100,0,180,0.3)';})
     .polygonStrokeColor(()=>'rgba(255,255,255,0.6)')
     .polygonAltitude(d=>getAlt(d.properties.name))
     .polygonLabel(d=>ttHtml(d))
