@@ -516,31 +516,34 @@ function cntForState(name){
   return sd.total;
 }
 
+let _cachedMax=null,_cachedMaxKey='';
 function maxCntContext(){
-  return Math.max(1,...Object.values(DAIL_DATA.states).map(sd=>{
+  const key=(activeYr||'')+(activeSect||'')+(filters.status||'');
+  if(_cachedMaxKey===key&&_cachedMax!==null)return _cachedMax;
+  _cachedMaxKey=key;
+  _cachedMax=Math.max(1,...Object.values(DAIL_DATA.states).map(sd=>{
     if(activeSect)return sd.sectors[activeSect]||0;
     if(activeYr)return sd.years[activeYr]||0;
     if(filters.status==='active')return sd.active||0;
     if(filters.status==='inactive')return(sd.total-sd.active)||0;
     return sd.total;
   }));
+  return _cachedMax;
 }
 
 function stateCol(name){
   const cnt=cntForState(name);
-  if(cnt===0)return 'rgba(150,180,220,0.18)';
+  if(cnt===0)return 'rgba(100,116,139,0.45)';
   const t=Math.min(cnt/maxCntContext(),1);
-  if(t<0.08)return 'rgba(59,130,246,0.45)';
-  if(t<0.25){const tt=(t-.08)/.17;const a=0.45+tt*0.2;return `rgba(${Math.round(59+tt*130)},${Math.round(130-tt*80)},${Math.round(246-tt*200)},${a.toFixed(2)})`; }
-  if(t<0.55){const tt=(t-.25)/.3;return `rgba(${Math.round(189+tt*50)},${Math.round(50-tt*30)},${Math.round(46-tt*20)},${(0.65+tt*0.15).toFixed(2)})`; }
-  return `rgba(${Math.round(220+t*20)},${Math.round(20)},${Math.round(20)},0.88)`;
+  if(t<0.08)return 'rgba(59,130,246,0.6)';
+  if(t<0.25){const tt=(t-.08)/.17;return `rgba(${Math.round(59+tt*130)},${Math.round(130-tt*80)},${Math.round(246-tt*200)},${(0.6+tt*0.15).toFixed(2)})`; }
+  if(t<0.55){const tt=(t-.25)/.3;return `rgba(${Math.round(189+tt*50)},${Math.round(50-tt*30)},${Math.round(46-tt*20)},${(0.75+tt*0.1).toFixed(2)})`; }
+  return `rgba(${Math.round(220+t*20)},20,20,0.9)`;
 }
 
 function getAlt(name){
-  const a=N2A[name],sd=a&&DAIL_DATA.states[a];
-  if(!sd)return 0.005;
   const cnt=cntForState(name),mx=maxCntContext();
-  return 0.005+(cnt/mx)*0.045;
+  return cnt===0?0.002:0.006+(cnt/mx)*0.04;
 }
 
 function ttHtml(d){
@@ -574,9 +577,9 @@ function initGlobe(){
     .polygonLabel(d=>ttHtml(d))
     .onPolygonClick(d=>selectState(d.properties.name))
     .onPolygonHover(d=>{
-      globe.polygonAltitude(dd=>{
-        const base=getAlt(dd.properties.name);
-        return(d&&dd===d)?base+0.025:base;
+      globe.polygonCapColor(dd=>{
+        if(!d)return stateCol(dd.properties.name);
+        return dd===d?'rgba(255,200,0,0.85)':stateCol(dd.properties.name);
       });
     })
     .pointOfView({lat:39.5,lng:-98.35,altitude:1.75},1200);
