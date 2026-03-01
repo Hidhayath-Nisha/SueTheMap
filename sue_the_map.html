@@ -775,19 +775,71 @@ function clearFilters(){
 }
 
 // ═══════ VOICE ═══════
+let convHistory=[];
+
 function initVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){document.getElementById('mic-btn').style.opacity='0.4';document.getElementById('mic-status').textContent='Voice not supported';return;}
-  recog=new SR();recog.lang='en-US';recog.continuous=false;recog.interimResults=false;
-  recog.onstart=()=>{listening=true;document.getElementById('mic-btn').classList.add('listening');document.getElementById('mic-status').textContent='🔴 Listening...';};
-  recog.onend=()=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-status').textContent='Click 🎙 to speak';};
-  recog.onerror=e=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-status').textContent=e.error==='not-allowed'?'❌ Mic access denied':'Try again';};
-  recog.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('query-box').value=t;submitQuery();};
+  const micBtn=document.getElementById('mic-btn');
+  const micStatus=document.getElementById('mic-status');
+  if(!SR){
+    micBtn.style.opacity='0.4';
+    micStatus.textContent='Voice not supported in this browser';
+    return;
+  }
+  recog=new SR();
+  recog.lang='en-US';
+  recog.continuous=true;
+  recog.interimResults=true;
+
+  recog.onstart=()=>{
+    listening=true;
+    micBtn.classList.add('listening');
+    micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
+    micStatus.textContent='🔴 Listening — speak now';
+  };
+
+  recog.onend=()=>{
+    listening=false;
+    micBtn.classList.remove('listening');
+    micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
+    micStatus.textContent='Tap 🎙 to speak';
+  };
+
+  recog.onerror=e=>{
+    listening=false;
+    micBtn.classList.remove('listening');
+    micStatus.textContent=e.error==='not-allowed'?'❌ Mic access denied':'❌ Error — try again';
+  };
+
+  recog.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('query-box').value=final||interim;
+    if(final.trim()){
+      recog.stop();
+      submitQuery();
+    }
+  };
 }
 
 function toggleMic(){
   if(!recog)return;
-  if(listening){recog.stop();}else{try{recog.start();}catch(e){document.getElementById('mic-status').textContent='Error — try again';}}
+  if(listening){
+    recog.stop();
+    window.speechSynthesis.cancel();
+    speaking=false;
+    const sb=document.getElementById('speak-btn');
+    if(sb)sb.textContent='🔊 Read Aloud';
+  }else{
+    window.speechSynthesis.cancel();
+    speaking=false;
+    document.getElementById('query-box').value='';
+    try{recog.start();}
+    catch(e){document.getElementById('mic-status').textContent='Error — try again';}
+  }
 }
 
 // ═══════ CHIPS ═══════
@@ -823,61 +875,146 @@ let speaking=false;
 function speakText(text){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  const utt=new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,''));
-  utt.rate=0.95;utt.pitch=1;utt.volume=1;
-  const voices=window.speechSynthesis.getVoices();
-  const pref=voices.find(v=>v.lang==='en-US'&&v.name.includes('Female'))||voices.find(v=>v.lang==='en-US')||voices[0];
-  if(pref)utt.voice=pref;
-  utt.onstart=()=>{speaking=true;document.getElementById('speak-btn').textContent='⏹ Stop';}
-  utt.onend=()=>{speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
-  window.speechSynthesis.speak(utt);
+  const clean=text.replace(/<[^>]*>/g,'').replace(/\*+/g,'').trim();
+  const utt=new SpeechSynthesisUtterance(clean);
+  utt.rate=0.92;utt.pitch=1.05;utt.volume=1;
+  // Try to get a natural-sounding voice
+  function trySpeak(){
+    const voices=window.speechSynthesis.getVoices();
+    const pref=voices.find(v=>v.lang==='en-US'&&(v.name.includes('Samantha')||v.name.includes('Google')||v.name.includes('Female')))
+      ||voices.find(v=>v.lang==='en-US')
+      ||voices[0];
+    if(pref)utt.voice=pref;
+    utt.onstart=()=>{
+      speaking=true;
+      const sb=document.getElementById('speak-btn');
+      if(sb)sb.textContent='⏹ Stop Speaking';
+      document.getElementById('mic-status').textContent='🔊 Speaking...';
+    };
+    utt.onend=()=>{
+      speaking=false;
+      const sb=document.getElementById('speak-btn');
+      if(sb)sb.textContent='🔊 Read Aloud';
+      document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+    };
+    utt.onerror=()=>{speaking=false;};
+    window.speechSynthesis.speak(utt);
+  }
+  // Voices may need a moment to load
+  if(window.speechSynthesis.getVoices().length)trySpeak();
+  else window.speechSynthesis.onvoiceschanged=trySpeak;
 }
 function toggleSpeak(){
-  if(speaking){window.speechSynthesis.cancel();speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
-  else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
+  if(speaking){
+    window.speechSynthesis.cancel();
+    speaking=false;
+    const sb=document.getElementById('speak-btn');
+    if(sb)sb.textContent='🔊 Read Aloud';
+    document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+  }else{
+    const t=document.getElementById('ai-response').innerText;
+    if(t)speakText(t);
+  }
 }
 
-// ═══════ GEMINI API ═══════
+// ═══════ GEMINI API (Conversational, DAIL-grounded) ═══════
+function buildSystemPrompt(){
+  // Inject the FULL dataset so the AI can only answer from this data
+  const statesSummary=Object.entries(DAIL_DATA.states).map(([abbr,s])=>{
+    const topSects=Object.entries(s.sector_counts||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}:${v}`).join(',');
+    return `${abbr}|${s.name}|total:${s.total}|active:${s.active}|media:${s.with_media}|sectors:${topSects}`;
+  }).join('
+');
+
+  const sectorData=Object.entries(DAIL_DATA.sector_totals).map(([k,v])=>`${k}:${v}`).join(', ');
+  const yearData=Object.entries(DAIL_DATA.year_trends).filter(([y])=>parseInt(y)>=2011)
+    .map(([y,v])=>`${y}:${v.total}`).join(', ');
+
+  const lSys=`You are a conversational AI litigation analyst for SueTheMap, powered by the DAIL (Database of AI Litigation) from GW Law.
+
+CRITICAL RULES:
+- You MUST answer ONLY using the DAIL data provided below. Do NOT use outside knowledge or make up statistics.
+- If a question cannot be answered from this data, say exactly: "I don't have that information in the DAIL dataset."
+- Keep answers concise and conversational (3-5 sentences). Use precise legal terminology.
+- Always cite specific states, numbers, or sectors from the data when relevant.
+
+DAIL DATASET (${DAIL_DATA.total_cases} total cases, 2011-2026):
+Total cases: ${DAIL_DATA.total_cases}
+Active cases with zero media coverage: ${DAIL_DATA.total_uncovered_active}
+
+Per-state data (abbr|name|total|active|media_covered|top_sectors):
+${statesSummary}
+
+Sector totals: ${sectorData}
+Yearly case counts: ${yearData}`;
+
+  const pSys=`You are a friendly AI assistant explaining AI lawsuits in plain language for SueTheMap.
+
+CRITICAL RULES:
+- You MUST answer ONLY using the DAIL data provided below. Do NOT make up facts or statistics.
+- If a question cannot be answered from this data, say: "I don't have that info in the dataset."
+- Keep it conversational, simple, and engaging (2-4 sentences). No legal jargon.
+
+DAIL DATASET (${DAIL_DATA.total_cases} total cases, 2011-2026):
+Total cases: ${DAIL_DATA.total_cases}
+Active cases with zero media coverage: ${DAIL_DATA.total_uncovered_active}
+
+Per-state data (abbr|name|total|active|media_covered|top_sectors):
+${statesSummary}
+
+Sector totals: ${sectorData}
+Yearly case counts: ${yearData}`;
+
+  return mode==='law'?lSys:pSys;
+}
+
 async function submitQuery(){
   const q=document.getElementById('query-box').value.trim();if(!q)return;
   const btn=document.getElementById('query-btn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   const resp=document.getElementById('ai-response');
-  resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
+  resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Thinking...';
   if(!GEMINI_API_KEY){
     resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Gemini Key ›</button>';
     btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
-  const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
-  const pSys="You are a journalist explaining AI lawsuits to everyday people. Use plain language, zero jargon. Make it feel like a news brief. 2-3 sentences max.";
-  const top10=Object.entries(DAIL_DATA.states).sort((a,b)=>b[1].total-a[1].total).slice(0,10).map(([k,v])=>`${k}(${v.total})`).join(',');
-  const ctx=`Dataset: ${DAIL_DATA.total_cases} AI litigation cases (2011-2026) across ${Object.keys(DAIL_DATA.states).length} US states.
-States by volume: ${top10}
-Top sectors: ${Object.entries(DAIL_DATA.sector_totals).slice(0,7).map(([k,v])=>`${k}(${v})`).join(',')}
-Yearly trend: ${Object.entries(DAIL_DATA.year_trends).filter(([y])=>parseInt(y)>=2020).map(([y,v])=>`${y}(${v.total})`).join(',')}
-${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
-Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
-Question: ${q}`;
+
+  // Add user message to conversation history
+  convHistory.push({role:'user',parts:[{text:q}]});
+  // Keep last 10 turns to avoid token limits
+  if(convHistory.length>10)convHistory=convHistory.slice(-10);
+
   try{
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        system_instruction:{parts:[{text:mode==='law'?lSys:pSys}]},
-        contents:[{role:'user',parts:[{text:ctx}]}],
-        generationConfig:{maxOutputTokens:400}
+        system_instruction:{parts:[{text:buildSystemPrompt()}]},
+        contents:convHistory,
+        generationConfig:{maxOutputTokens:500,temperature:0.3}
       })
     });
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
     const data=await r.json();
     const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
-    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
-    <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
+
+    // Add assistant response to history for multi-turn
+    convHistory.push({role:'model',parts:[{text}]});
+
+    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing · DAIL Data</div>${text.replace(/
+/g,'<br>')}
+    <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>
+    <button onclick="convHistory=[];document.getElementById('ai-response').innerHTML='';" style="margin-top:8px;margin-left:6px;background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted)">🔄 New Chat</button>`;
+
+    // Auto-speak the response
     speakText(text);
+
+    // If a state is mentioned, highlight it on the globe
     const mentioned=Object.values(DAIL_DATA.states).map(s=>s.name).find(n=>text.includes(n));
     if(mentioned)selectState(mentioned);
   }catch(e){
     resp.innerHTML=`<span style="color:var(--accent)">⚠ Error: ${e.message}</span>`;
+    convHistory.pop(); // Remove the failed user message
   }
   btn.disabled=false;btn.innerHTML='Ask AI ›';
 }
