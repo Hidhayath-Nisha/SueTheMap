@@ -56,8 +56,31 @@ state_map = {
     'District of Columbia': 'DC',
 }
 
+COURT_ABBR_MAP = {
+    r'\bN\.?D\.?\s*Cal\.?': 'CA', r'\bC\.?D\.?\s*Cal\.?': 'CA',
+    r'\bE\.?D\.?\s*Cal\.?': 'CA', r'\bS\.?D\.?\s*Cal\.?': 'CA',
+    r'\bN\.?D\.?\s*N\.?Y\.?': 'NY', r'\bS\.?D\.?\s*N\.?Y\.?': 'NY',
+    r'\bE\.?D\.?\s*N\.?Y\.?': 'NY', r'\bW\.?D\.?\s*N\.?Y\.?': 'NY',
+    r'\bN\.?D\.?\s*Ill\.?': 'IL', r'\bC\.?D\.?\s*Ill\.?': 'IL',
+    r'\bN\.?D\.?\s*Tex\.?': 'TX', r'\bS\.?D\.?\s*Tex\.?': 'TX',
+    r'\bW\.?D\.?\s*Tex\.?': 'TX', r'\bE\.?D\.?\s*Tex\.?': 'TX',
+    r'\bS\.?D\.?\s*Fla\.?': 'FL', r'\bN\.?D\.?\s*Fla\.?': 'FL',
+    r'\bW\.?D\.?\s*Wash\.?': 'WA', r'\bE\.?D\.?\s*Wash\.?': 'WA',
+    r'\bD\.?\s*Mass\.?': 'MA', r'\bE\.?D\.?\s*Mich\.?': 'MI',
+    r'\bN\.?D\.?\s*Ga\.?': 'GA', r'\bD\.?\s*Del\.?': 'DE',
+    r'\bD\.?\s*N\.?J\.?': 'NJ', r'\bD\.?\s*Conn\.?': 'CT',
+    r'\bS\.?D\.?\s*Ohio': 'OH', r'\bN\.?D\.?\s*Ohio': 'OH',
+    r'\bE\.?D\.?\s*Va\.?': 'VA', r'\bW\.?D\.?\s*Va\.?': 'VA',
+    r'\bD\.?\s*D\.?C\.?': 'DC',
+}
+
 def get_state_abbr(jurisdiction_name):
     s = clean(jurisdiction_name)
+    # Try court abbreviation patterns first
+    for pattern, abbr in COURT_ABBR_MAP.items():
+        if re.search(pattern, s, flags=re.I):
+            name = [k for k, v in state_map.items() if v == abbr][0]
+            return abbr, name
     s2 = re.sub(r'\s*\(federal\)', '', s, flags=re.I).strip()
     s2 = re.sub(r'\s*\(state\)', '', s2, flags=re.I).strip()
     for name, abbr in state_map.items():
