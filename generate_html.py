@@ -257,6 +257,22 @@ select.fsel:focus{border-color:var(--law-blue);}
 .mp-pub-card-meta{font-size:15px;color:var(--muted);margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;}
 .mp-pub-card-desc{font-size:16px;color:#334155;line-height:1.8;margin-bottom:12px;}
 .mp-pub-card-sig{font-size:15px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:11px;margin-top:9px;}
+/* HELP MODAL */
+#help-modal{position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px;}
+#help-modal.open{display:flex;animation:fadein .2s ease;}
+@keyframes fadein{from{opacity:0;}to{opacity:1;}}
+.help-card{background:var(--surface);border-radius:16px;width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.2);overflow:hidden;}
+.help-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);}
+.help-title{font-size:20px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;}
+.help-close{background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;}
+.help-close:hover{color:var(--accent);}
+.help-body{padding:24px;overflow-y:auto;font-size:15px;line-height:1.6;color:#334155;}
+.help-body h3{font-size:16px;color:var(--text);margin-top:20px;margin-bottom:8px;font-weight:700;}
+.help-body h3:first-child{margin-top:0;}
+.help-body ul{margin-left:20px;margin-bottom:16px;}
+.help-body li{margin-bottom:6px;}
+#help-btn{background:none;border:2px solid var(--border);color:var(--muted);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;transition:all .2s;font-size:16px;}
+#help-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--text);}
 """
 
 BODY = """\
@@ -287,6 +303,7 @@ CSS_PLACEHOLDER
     <button class="mode-btn law-active" id="law-btn" onclick="openModePage('law')">⚖️ LAW MODE</button>
     <button class="mode-btn" id="pub-btn" onclick="openModePage('public')">🌍 PUBLIC MODE</button>
   </div>
+  <button id="help-btn" onclick="document.getElementById('help-modal').classList.add('open')" title="How to use SueTheMap">?</button>
   <button id="share-btn" onclick="shareApp()" title="Copy shareable link" style="display:none">🔗 Share</button>
   <div id="global-stats">
     <div class="gstat"><span class="gstat-num" id="gs-total" style="color:var(--text)">–</span><span class="gstat-lbl">Cases</span></div>
@@ -392,6 +409,40 @@ CSS_PLACEHOLDER
   </div>
   <div id="mp-body"></div>
 </div>
+
+<div id="help-modal">
+  <div class="help-card">
+    <div class="help-header">
+      <div class="help-title">ℹ️ How to use SueTheMap</div>
+      <button class="help-close" onclick="document.getElementById('help-modal').classList.remove('open')">×</button>
+    </div>
+    <div class="help-body">
+      <h3>🌍 The 3D Globe</h3>
+      <p>Click and drag to rotate the globe. The height and color of each state represent the volume of active AI lawsuits. <strong>Click any state</strong> to see a detailed briefing of the active cases in that jurisdiction.</p>
+      
+      <h3>⚖️ Law Mode vs 🌍 Public Mode</h3>
+      <ul>
+        <li><strong>Law Mode:</strong> Tap the "Law Mode" button to enter the Legal Intelligence Dashboard. This view is for lawyers and researchers, featuring full tables of all 293 cases, filterable by sector, status, and class action.</li>
+        <li><strong>Public Mode:</strong> Tap "Public Mode" to see the Untold Story dashboard. This view highlights the human impact, focusing exclusively on lawsuits that have received <strong>zero media coverage</strong>.</li>
+      </ul>
+
+      <h3>🤖 AI Legal Assistant</h3>
+      <p>On the left panel, you can use the AI Query tool.</p>
+      <ul>
+        <li><strong>Voice:</strong> Click the microphone 🎙️ icon and start speaking. The AI will answer continuously until you click the mic again.</li>
+        <li><strong>Text:</strong> Type your query and hit "Ask AI".</li>
+        <li>The AI's personality changes automatically based on whether you are currently in Law Mode or Public Mode.</li>
+      </ul>
+
+      <h3>🔍 Filters & Sectors</h3>
+      <p>Use the "Filters" tab on the left to narrow the globe to specific criteria (e.g. Active cases). Use the "Sectors" tab on the right to see which industries (like Copyright, Healthcare, or Employment) are being sued the most.</p>
+      
+      <h3>📊 DAIL Data</h3>
+      <p>All data is sourced from the Database of AI Litigation (DAIL) maintained by George Washington University Law School.</p>
+    </div>
+  </div>
+</div>
+
 <script>
 let MISTRAL_API_KEY = '__MISTRAL_KEY__' || localStorage.getItem('sue_map_mk') || '';
 """
