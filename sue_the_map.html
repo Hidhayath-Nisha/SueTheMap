@@ -516,31 +516,46 @@ function cntForState(name){
   return sd.total;
 }
 
+function maxCntContext(){
+  return Math.max(1,...Object.values(DAIL_DATA.states).map(sd=>{
+    if(activeSect)return sd.sectors[activeSect]||0;
+    if(activeYr)return sd.years[activeYr]||0;
+    if(filters.status==='active')return sd.active||0;
+    if(filters.status==='inactive')return(sd.total-sd.active)||0;
+    return sd.total;
+  }));
+}
+
 function stateCol(name){
   const cnt=cntForState(name);
   if(cnt===0)return 'rgba(150,180,220,0.18)';
-  const t=Math.min(cnt/103,1);
+  const t=Math.min(cnt/maxCntContext(),1);
   if(t<0.08)return 'rgba(59,130,246,0.45)';
   if(t<0.25){const tt=(t-.08)/.17;const a=0.45+tt*0.2;return `rgba(${Math.round(59+tt*130)},${Math.round(130-tt*80)},${Math.round(246-tt*200)},${a.toFixed(2)})`; }
   if(t<0.55){const tt=(t-.25)/.3;return `rgba(${Math.round(189+tt*50)},${Math.round(50-tt*30)},${Math.round(46-tt*20)},${(0.65+tt*0.15).toFixed(2)})`; }
-  return `rgba(${Math.round(220+tt*20)},${Math.round(20)},${Math.round(20)},0.88)`;
+  return `rgba(${Math.round(220+t*20)},${Math.round(20)},${Math.round(20)},0.88)`;
 }
 
 function getAlt(name){
   const a=N2A[name],sd=a&&DAIL_DATA.states[a];
-  return sd?0.005+(sd.total/103)*0.045:0.005;
+  if(!sd)return 0.005;
+  const cnt=cntForState(name),mx=maxCntContext();
+  return 0.005+(cnt/mx)*0.045;
 }
 
 function ttHtml(d){
   const nm=d.properties.name,a=N2A[nm],sd=a&&DAIL_DATA.states[a];
   if(!sd)return `<div style="padding:10px 12px;font-family:'DM Sans',sans-serif;color:#0f172a;background:#fff;border-radius:8px"><b>${nm}</b><br><span style="color:#64748b;font-size:12px">No recorded cases</span></div>`;
+  const cnt=cntForState(nm);
+  const ctxLabel=activeYr?`in ${activeYr}`:activeSect?`in ${sl(activeSect)}`:filters.status==='active'?'(active)':filters.status==='inactive'?'(inactive)':'';
   const top=Object.entries(sd.sectors).sort((a,b)=>b[1]-a[1])[0];
+  const activeLine=activeYr?`<span style="color:#64748b;font-size:12px">${sd.active} active total · ${sl(top[0])}</span>`:`<span style="color:#64748b;font-size:12px">${sd.active} active · ${sl(top[0])}</span>`;
   return `<div style="padding:10px 12px;font-family:'DM Sans',sans-serif;color:#0f172a;min-width:170px;background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15)">
     <b style="font-size:15px;color:#0f172a">${nm}</b><br>
-    <span style="color:#dc2626;font-family:'DM Mono',monospace;font-size:20px;font-weight:700">${sd.total}</span>
-    <span style="color:#64748b;font-size:13px"> cases</span><br>
-    <span style="color:#64748b;font-size:12px">${sd.active} active · ${sl(top[0])}</span>
-    ${sd.uncovered_active>0?`<br><span style="color:#ea580c;font-size:11px;font-weight:600">⚠ ${sd.uncovered_active} uncovered</span>`:''}
+    <span style="color:#dc2626;font-family:'DM Mono',monospace;font-size:20px;font-weight:700">${cnt}</span>
+    <span style="color:#64748b;font-size:13px"> case${cnt!==1?'s':''} ${ctxLabel}</span><br>
+    ${activeLine}
+    ${sd.uncovered_active>0&&!activeYr?`<br><span style="color:#ea580c;font-size:11px;font-weight:600">⚠ ${sd.uncovered_active} uncovered</span>`:''}
   </div>`;
 }
 
@@ -578,6 +593,7 @@ function initGlobe(){
 function refreshGlobe(){
   if(!globe)return;
   globe.polygonCapColor(d=>stateCol(d.properties.name));
+  globe.polygonAltitude(d=>getAlt(d.properties.name));
 }
 
 // ═══════ STATE SELECTION ═══════
