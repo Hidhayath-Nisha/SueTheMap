@@ -319,18 +319,11 @@ CSS_PLACEHOLDER
       <div class="ptab" id="ptab-filters" onclick="switchLeft('filters')">Filters</div>
     </div>
     <div class="tab-content" id="tab-ai">
-      <div id="mic-area">
-        <div id="mic-btn" onclick="toggleMic()" title="Click to speak">
-          <svg viewBox="0 0 24 24"><path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V6zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        </div>
-        <div id="mic-status">Click 🎙 to speak your question</div>
-      <div style="font-size:10px;color:#94a3b8;text-align:center;margin-top:4px">
-        <kbd style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:9px">/</kbd> to focus search &nbsp;
-        <kbd style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:9px">←→</kbd> cycle states
+      <div id="mic-area" style="display:flex;flex-direction:column;gap:10px;margin-bottom:15px;align-items:center;">
+        <button id="start-ast-btn" onclick="startAssistant()" style="width:100%;padding:10.5px;background:var(--accent);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:15px;transition:0.2s;">Start Assistant</button>
+        <button id="stop-ast-btn" onclick="stopAssistant()" disabled style="width:100%;padding:10.5px;background:var(--surface2);color:var(--muted);border:none;border-radius:8px;font-weight:600;cursor:not-allowed;font-family:'DM Sans',sans-serif;font-size:15px;transition:0.2s;">Stop Assistant</button>
+        <div id="mic-status" style="margin-top:5px;font-size:13px;color:var(--muted);">Click Start to begin</div>
       </div>
-      </div>
-      <textarea id="query-box" placeholder="e.g. Which states have facial recognition cases with no media coverage?"></textarea>
-      <button id="query-btn" onclick="submitQuery()">Ask AI ›</button>
       <div class="section-label" id="chips-lbl">Suggested Queries</div>
       <div class="chips" id="chips"></div>
       <div id="ai-response"></div>
@@ -886,14 +879,12 @@ function clearFilters(){
 }
 
 // ═══════ VOICE ═══════
-// ═══════ VOICE ═══════
 let convHistory=[];
+let userStoppedMic=true;
 function initVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const micBtn=document.getElementById('mic-btn');
   const micStatus=document.getElementById('mic-status');
   if(!SR){
-    micBtn.style.opacity='0.4';
     micStatus.textContent='Voice not supported in this browser';
     return;
   }
@@ -904,17 +895,13 @@ function initVoice(){
 
   recog.onstart=()=>{
     listening=true;
-    micBtn.classList.add('listening');
-    micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
     micStatus.textContent='🔴 Listening — speak now';
   };
 
   recog.onend=()=>{
     if(userStoppedMic){
       listening=false;
-      micBtn.classList.remove('listening');
-      micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
-      micStatus.textContent='Tap 🎙 to speak';
+      micStatus.textContent='Assistant stopped';
     } else {
       // Browser stopped it automatically after a phrase, restart it to keep listening
       try{ recog.start(); }catch(e){}
@@ -929,7 +916,13 @@ function initVoice(){
     }
     listening=false;
     userStoppedMic=true;
-    micBtn.classList.remove('listening');
+    document.getElementById('start-ast-btn').disabled=false;
+    document.getElementById('start-ast-btn').style.background='var(--accent)';
+    document.getElementById('start-ast-btn').style.cursor='pointer';
+    document.getElementById('stop-ast-btn').disabled=true;
+    document.getElementById('stop-ast-btn').style.background='var(--surface2)';
+    document.getElementById('stop-ast-btn').style.color='var(--muted)';
+    document.getElementById('stop-ast-btn').style.cursor='not-allowed';
     micStatus.textContent=e.error==='not-allowed'?'❌ Mic access denied':'❌ Error — try again';
   };
 
@@ -939,31 +932,52 @@ function initVoice(){
       if(e.results[i].isFinal)final+=e.results[i][0].transcript;
       else interim+=e.results[i][0].transcript;
     }
-    document.getElementById('query-box').value=final||interim;
     if(final.trim()){
-      submitQuery();
+      submitQuery(final.trim());
     }
   };
 }
 
-let userStoppedMic=true;
-function toggleMic(){
+function startAssistant(){
   if(!recog)return;
-  if(listening && !userStoppedMic){
-    userStoppedMic=true; // Mark as explicitly stopped
-    recog.stop();
-    window.speechSynthesis.cancel();
-    speaking=false;
-    const sb=document.getElementById('speak-btn');
-    if(sb)sb.textContent='🔊 Read Aloud';
-  }else{
-    userStoppedMic=false; // Mark as running
-    window.speechSynthesis.cancel();
-    speaking=false;
-    document.getElementById('query-box').value='';
-    try{recog.start();}
-    catch(e){document.getElementById('mic-status').textContent='Error — try again';}
-  }
+  userStoppedMic=false;
+  window.speechSynthesis.cancel();
+  speaking=false;
+  
+  document.getElementById('start-ast-btn').disabled=true;
+  document.getElementById('start-ast-btn').style.background='var(--surface2)';
+  document.getElementById('start-ast-btn').style.color='var(--muted)';
+  document.getElementById('start-ast-btn').style.cursor='not-allowed';
+  
+  document.getElementById('stop-ast-btn').disabled=false;
+  document.getElementById('stop-ast-btn').style.background='var(--accent)';
+  document.getElementById('stop-ast-btn').style.color='white';
+  document.getElementById('stop-ast-btn').style.cursor='pointer';
+  
+  document.getElementById('ai-response').innerHTML='';
+  try{recog.start();}
+  catch(e){document.getElementById('mic-status').textContent='Error — try again';}
+}
+
+function stopAssistant(){
+  if(!recog)return;
+  userStoppedMic=true;
+  recog.stop();
+  window.speechSynthesis.cancel();
+  speaking=false;
+  
+  document.getElementById('start-ast-btn').disabled=false;
+  document.getElementById('start-ast-btn').style.background='var(--accent)';
+  document.getElementById('start-ast-btn').style.color='white';
+  document.getElementById('start-ast-btn').style.cursor='pointer';
+  
+  document.getElementById('stop-ast-btn').disabled=true;
+  document.getElementById('stop-ast-btn').style.background='var(--surface2)';
+  document.getElementById('stop-ast-btn').style.color='var(--muted)';
+  document.getElementById('stop-ast-btn').style.cursor='not-allowed';
+  
+  const sb=document.getElementById('speak-btn');
+  if(sb)sb.textContent='Read Aloud';
 }
 
 // ═══════ CHIPS ═══════
@@ -976,7 +990,7 @@ function updateChips(){
   document.getElementById('chips').innerHTML=c.map(q=>`<div class="chip" onclick="useChip(this)" data-q="${q.replace(/"/g,'&quot;')}">💬 ${q.slice(0,40)}${q.length>40?'...':''}</div>`).join('');
 }
 
-function useChip(el){document.getElementById('query-box').value=el.dataset.q;submitQuery();}
+function useChip(el){submitQuery(el.dataset.q);}
 
 // ═══════ API KEY MANAGEMENT ═══════
 function setApiKey(){
@@ -1024,12 +1038,12 @@ function speakText(text){
       if(document.getElementById('mic-btn').classList.contains('listening')){
         try{ recog.start(); }catch(e){}
       } else {
-        document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+        document.getElementById('mic-status').textContent='Waiting to speak...';
       }
     };
     utt.onerror=()=>{
       speaking=false;
-      if(document.getElementById('mic-btn').classList.contains('listening')){
+      if(!userStoppedMic){
         try{ recog.start(); }catch(e){}
       }
     };
@@ -1044,15 +1058,15 @@ function toggleSpeak(){
 }
 
 // ═══════ MISTRAL API ═══════
-async function submitQuery(){
-  const q=document.getElementById('query-box').value.trim();if(!q)return;
-  const btn=document.getElementById('query-btn');
-  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+async function submitQuery(queryText){
+  if(!queryText)return;
+  const q=queryText.trim();if(!q)return;
+  document.getElementById('ai-response').innerHTML='';
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
   if(!MISTRAL_API_KEY){
     resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Mistral Key ›</button>';
-    btn.disabled=false;btn.innerHTML='Ask AI ›';return;
+    return;
   }
   
   const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
@@ -1103,7 +1117,6 @@ Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}`;
     resp.innerHTML=`<span style="color:var(--accent)">⚠ Error: ${e.message}</span>`;
     convHistory.pop(); // Remove failed message
   }
-  btn.disabled=false;btn.innerHTML='Ask AI ›';
 }
 
 // ═══════ MODE SWITCH ═══════
