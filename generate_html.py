@@ -1,7 +1,7 @@
 """Generate sue_the_map.html — single self-contained file."""
-import json, re, os
+import json
+import os
 
-# Read API key from .env file if present
 def read_env_key():
     env_paths = ['.env', '../.env', os.path.join(os.path.dirname(__file__), '.env')]
     for p in env_paths:
@@ -15,42 +15,16 @@ def read_env_key():
     return ''
 
 MISTRAL_KEY = read_env_key()
-if MISTRAL_KEY:
-    print(f'API key loaded from .env ({MISTRAL_KEY[:8]}...)')
-else:
-    print('No API key found in .env — users will need to enter it manually')
-
 
 with open('dail_data.json', 'r', encoding='utf-8') as f:
-    dail_raw = json.load(f)
-
-def sanitize_str(s):
-    if not isinstance(s, str):
-        return s
-    # Remove backslashes that would break JS parsing
-    s = s.replace('\\', ' ')
-    # Collapse extra whitespace
-    s = re.sub(r'\s+', ' ', s).strip()
-    return s
-
-def sanitize_obj(obj):
-    if isinstance(obj, dict):
-        return {k: sanitize_obj(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [sanitize_obj(i) for i in obj]
-    elif isinstance(obj, str):
-        return sanitize_str(obj)
-    return obj
-
-dail_clean = sanitize_obj(dail_raw)
-dail_json_str = json.dumps(dail_clean, ensure_ascii=False, separators=(',', ':'))
+    dail_json_str = f.read()
 
 with open('us-states.json', 'r', encoding='utf-8') as f:
     geo_json_str = f.read()
 
 # Escape </script> to prevent premature HTML tag closure
-dail_json_safe = dail_json_str.replace('</', '<\\/')
-geo_json_safe = geo_json_str.replace('</', '<\\/')
+dail_json_safe = dail_json_str.replace('</', '<\/')
+geo_json_safe = geo_json_str.replace('</', '<\/')
 
 CSS = """\
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -71,6 +45,10 @@ html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(
   border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .25s;white-space:nowrap;}
 .mode-btn.law-active{background:var(--accent);color:#fff;}
 .mode-btn.pub-active{background:var(--accent2);color:#fff;}
+#share-btn{padding:7px 15px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;}
+#share-btn:hover{background:var(--law-blue);color:#fff;border-color:var(--law-blue);}
+#share-btn.copied{background:var(--active-green);color:#fff;border-color:var(--active-green);}
 #global-stats{display:flex;gap:22px;margin-left:auto;flex-shrink:0;}
 .gstat{display:flex;flex-direction:column;align-items:center;}
 .gstat-num{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;}
@@ -197,7 +175,7 @@ select.fsel:focus{border-color:var(--law-blue);}
 .clr-sect-btn{width:100%;padding:8px 12px;background:rgba(220,38,38,.07);border:1.5px solid rgba(220,38,38,.3);
   border-radius:8px;color:var(--accent);font-size:13px;cursor:pointer;margin-bottom:10px;font-family:'DM Sans',sans-serif;font-weight:600;}
 .clr-sect-btn:hover{background:rgba(220,38,38,.13);}
-#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
+#reset-btn{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;\n  z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;font-family:'DM Sans',sans-serif;}\n#reset-btn:hover{background:#fff;color:var(--text);box-shadow:0 3px 12px rgba(0,0,0,.15);}\n#legend{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid var(--border);\n  border-radius:9px;padding:9px 12px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.1);min-width:130px;}\n.leg-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}\n.leg-grad{height:10px;border-radius:4px;background:linear-gradient(to right,rgba(254,240,138,0),rgba(254,240,138,0.6),rgba(249,115,22,0.9),rgba(185,28,28,0.97));margin-bottom:3px;}\n.leg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}\n#footer{height:26px;background:var(--surface);border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #footer span{font-size:12px;color:var(--muted);}
 #footer a{color:var(--muted);text-decoration:none;}
@@ -217,6 +195,68 @@ select.fsel:focus{border-color:var(--law-blue);}
   #main{height:auto;display:block;}
   .case-card{break-inside:avoid;page-break-inside:avoid;}
 }
+/* MODE PAGE */
+#mode-page{position:fixed;inset:0;background:var(--bg);z-index:1000;overflow-y:auto;
+  display:none;font-size:17px;}
+#mode-page.open{display:block;animation:mpIn .25s ease;}
+@keyframes mpIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
+#mp-header{position:sticky;top:0;background:var(--surface);border-bottom:2px solid var(--border);
+  padding:16px 32px;display:flex;align-items:center;justify-content:space-between;z-index:10;gap:16px;}
+#mp-title{font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--text);letter-spacing:1px;}
+#mp-subtitle{font-size:15px;color:var(--muted);margin-top:2px;}
+#mp-close{background:none;border:1px solid var(--border);border-radius:8px;padding:10px 24px;
+  cursor:pointer;font-size:16px;color:var(--text);font-family:'DM Sans',sans-serif;flex-shrink:0;}
+#mp-close:hover{background:var(--surface2);}
+#mp-body{padding:28px 32px;max-width:1200px;margin:0 auto;font-size:15px;}
+.mp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.mp-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
+.mp-stat-num{font-family:'DM Mono',monospace;font-size:46px;font-weight:700;line-height:1;}
+.mp-stat-lbl{font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:7px;}
+.mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.mp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;}
+.mp-card-title{font-size:16px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  font-weight:600;margin-bottom:18px;}
+.mp-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.mp-bar-label{font-size:17px;color:var(--text);width:150px;flex-shrink:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-bar-track{flex:1;height:13px;background:var(--surface2);border-radius:6px;overflow:hidden;}
+.mp-bar-fill{height:100%;border-radius:6px;}
+.mp-bar-val{font-size:16px;color:var(--muted);font-family:'DM Mono',monospace;width:36px;text-align:right;}
+.mp-year-bar{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:12px;padding-bottom:2px;}
+.mp-yr-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.mp-yr-fill{width:100%;border-radius:3px 3px 0 0;min-height:3px;}
+.mp-yr-lbl{font-size:10px;color:var(--muted);transform:rotate(-45deg);transform-origin:top center;margin-top:4px;}
+.mp-yr-num{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+.mp-story-card{background:var(--surface2);border-radius:8px;padding:14px 16px;
+  border-left:3px solid var(--accent2);}
+.mp-story-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.mp-story-meta{font-size:13px;color:var(--muted);line-height:1.6;}
+.mp-case-table{width:100%;border-collapse:collapse;font-size:16px;margin-top:6px;}
+.mp-case-table th{text-align:left;padding:11px 10px;font-size:14px;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;}
+.mp-case-table td{padding:15px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+.mp-case-table tr.case-main:hover td{background:var(--surface2);cursor:pointer;}
+.mp-case-caption{font-weight:600;color:var(--text);margin-bottom:5px;font-size:17px;}
+.mp-case-desc{font-size:15px;color:var(--muted);line-height:1.65;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.mp-case-sig{font-size:14px;color:var(--law-blue);font-style:italic;margin-top:5px;}
+.mp-expand-row td{background:var(--surface2);padding:20px 24px!important;border-bottom:2px solid var(--border);}
+.mp-expand-body{font-size:16px;line-height:1.8;color:var(--text);}
+.mp-expand-label{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-top:16px;margin-bottom:6px;}
+.mp-read-more{font-size:14px;color:var(--law-blue);cursor:pointer;margin-top:5px;display:inline-block;border:none;background:none;padding:0;font-family:'DM Sans',sans-serif;}
+.mp-badge{display:inline-block;padding:4px 11px;border-radius:10px;font-size:14px;font-weight:600;}
+.badge-active{background:#dcfce7;color:#15803d;}
+.badge-inactive{background:#f1f5f9;color:#64748b;}
+.badge-uncov{background:#fff7ed;color:#c2410c;}
+.mp-filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.mp-fsel{border:1px solid var(--border);border-radius:7px;padding:10px 16px;
+  font-size:16px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;cursor:pointer;}
+.mp-pub-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:24px;border-left:4px solid var(--accent2);}
+.mp-pub-card-head{font-size:19px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.mp-pub-card-meta{font-size:15px;color:var(--muted);margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;}
+.mp-pub-card-desc{font-size:16px;color:#334155;line-height:1.8;margin-bottom:12px;}
+.mp-pub-card-sig{font-size:15px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:11px;margin-top:9px;}
 """
 
 BODY = """\
@@ -244,9 +284,10 @@ CSS_PLACEHOLDER
 <div id="header">
   <div id="logo">SUE <span>THE</span> MAP</div>
   <div id="mode-toggle">
-    <button class="mode-btn law-active" id="law-btn" onclick="setMode('law')">⚖️ LAW MODE</button>
-    <button class="mode-btn" id="pub-btn" onclick="setMode('public')">🌍 PUBLIC MODE</button>
+    <button class="mode-btn law-active" id="law-btn" onclick="openModePage('law')">⚖️ LAW MODE</button>
+    <button class="mode-btn" id="pub-btn" onclick="openModePage('public')">🌍 PUBLIC MODE</button>
   </div>
+  <button id="share-btn" onclick="shareApp()" title="Copy shareable link" style="display:none">🔗 Share</button>
   <div id="global-stats">
     <div class="gstat"><span class="gstat-num" id="gs-total" style="color:var(--text)">–</span><span class="gstat-lbl">Cases</span></div>
     <div class="gstat"><span class="gstat-num" id="gs-active" style="color:var(--active-green)">–</span><span class="gstat-lbl">Active</span></div>
@@ -258,10 +299,6 @@ CSS_PLACEHOLDER
   <div id="left-panel">
     <div class="panel-tabs">
       <div class="ptab active" id="ptab-ai" onclick="switchLeft('ai')">AI Query</div>
-      <div class="ptab" id="ptab-alerts" onclick="switchLeft('alerts')">
-        <span id="alert-tab-law">⚠ Coverage Gap</span>
-        <span id="alert-tab-pub" style="display:none">📰 Untold Stories</span>
-      </div>
       <div class="ptab" id="ptab-filters" onclick="switchLeft('filters')">Filters</div>
     </div>
     <div class="tab-content" id="tab-ai">
@@ -281,18 +318,7 @@ CSS_PLACEHOLDER
       <div class="chips" id="chips"></div>
       <div id="ai-response"></div>
     </div>
-    <div class="tab-content" id="tab-alerts" style="display:none">
-      <div class="alert-banner">
-        <div class="ab-count" id="ab-num">–</div>
-        <div class="ab-text">
-          <span id="ab-law-txt">active AI lawsuits have received <strong>NO</strong> media coverage</span>
-          <span id="ab-pub-txt" style="display:none">AI lawsuits have <strong>never been covered</strong> by press</span>
-        </div>
-      </div>
-      <div class="section-label" id="alerts-title-law">Underreported Litigation — Coverage Gap Analysis</div>
-      <div class="section-label" id="alerts-title-pub" style="display:none">Stories Nobody Is Covering Yet</div>
-      <div id="uncov-list"></div>
-    </div>
+
     <div class="tab-content" id="tab-filters" style="display:none">
       <div class="section-label">Status</div>
       <select class="fsel" id="f-status" onchange="applyFilters()">
@@ -321,11 +347,18 @@ CSS_PLACEHOLDER
     </div>
     <div id="globeViz"></div>
     <div id="year-bar"></div>
+    <button id="reset-btn" onclick="resetGlobe()">&#x27F3; Reset View</button>
+    <div id="legend">
+      <div class="leg-title">Cases per State</div>
+      <div class="leg-scale">
+        <div class="leg-grad"></div>
+        <div class="leg-labels"><span>0</span><span>Few</span><span>103+</span></div>
+      </div>
+    </div>
   </div>
   <div id="right-panel">
     <div id="right-tabs">
       <div class="rtab active" id="rtab-state" onclick="switchRight('state')">State</div>
-      <div class="rtab" id="rtab-timeline" onclick="switchRight('timeline')">Timeline</div>
       <div class="rtab" id="rtab-sectors" onclick="switchRight('sectors')">Sectors</div>
     </div>
     <div id="right-body">
@@ -336,11 +369,7 @@ CSS_PLACEHOLDER
         </div>
         <div id="state-briefing"></div>
       </div>
-      <div id="tab-timeline" style="display:none">
-        <div class="section-label" id="tl-title-law">Annual Case Filing Trends (2011–2026)</div>
-        <div class="section-label" id="tl-title-pub" style="display:none">AI Lawsuits Filed Each Year</div>
-        <div id="timeline-chart"></div>
-      </div>
+
       <div id="tab-sectors" style="display:none">
         <div class="section-label" id="sect-title-law">National Sector Breakdown</div>
         <div class="section-label" id="sect-title-pub" style="display:none">What AI Lawsuits Are About</div>
@@ -353,10 +382,18 @@ CSS_PLACEHOLDER
   </div>
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
+<div id="mode-page">
+  <div id="mp-header">
+    <div>
+      <div id="mp-title">⚖️ Legal Intelligence Dashboard</div>
+      <div id="mp-subtitle">293 AI Litigation Cases · GW Law DAIL Dataset</div>
+    </div>
+    <button id="mp-close" onclick="closeModePage()">✕ Back to Globe</button>
+  </div>
+  <div id="mp-body"></div>
+</div>
 <script>
-var _baked='__MISTRAL_KEY_PLACEHOLDER__';var _stored=localStorage.getItem('sue_map_mk');
-let MISTRAL_API_KEY=(_stored&&_stored.length>20)?_stored:(_baked.length>20?_baked:'');
-if(MISTRAL_API_KEY) localStorage.setItem('sue_map_mk',MISTRAL_API_KEY);
+let MISTRAL_API_KEY = '__MISTRAL_KEY__' || localStorage.getItem('sue_map_mk') || '';
 """
 
 JS = """\
@@ -412,7 +449,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const c=/Chrome/.test(navigator.userAgent)&&!/Edg/.test(navigator.userAgent);
   const e=/Edg/.test(navigator.userAgent);
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
-  initStats(); populateFilters(); renderUncovered(); renderSectors(); renderTimeline();
+  initStats(); populateFilters(); renderSectors();
   initVoice(); updateChips(); loadGlobe(); initKeyboard();
   // Auto-select the state with most cases after globe loads
   setTimeout(()=>{
@@ -433,7 +470,6 @@ function initStats(){
   animCount('gs-active',totalActive);
   document.getElementById('gs-states').textContent=Object.keys(D.states).length;
   animCount('gs-uncov',D.total_uncovered_active);
-  document.getElementById('ab-num').textContent=D.total_uncovered_active;
 }
 
 // ═══════ GLOBE ═══════
@@ -478,44 +514,41 @@ function stateCol(name){
 }
 
 function getAlt(name){
-  const cnt=cntForState(name);
-  if(cnt===0)return 0.005;
-  const t=Math.min(cnt/maxCntContext(),1);
-  return 0.005+Math.sqrt(t)*0.045;
+  const cnt=cntForState(name),mx=maxCntContext();
+  return cnt===0?0.002:0.008+(cnt/mx)*0.04;
 }
 
 function ttHtml(d){
   const nm=d.properties.name,a=N2A[nm],sd=a&&DAIL_DATA.states[a];
   if(!sd)return `<div style="padding:10px 12px;font-family:'DM Sans',sans-serif;color:#0f172a;background:#fff;border-radius:8px"><b>${nm}</b><br><span style="color:#64748b;font-size:12px">No recorded cases</span></div>`;
+  const cnt=cntForState(nm);
+  const ctxLabel=activeYr?`in ${activeYr}`:activeSect?`in ${sl(activeSect)}`:filters.status==='active'?'(active)':filters.status==='inactive'?'(inactive)':'';
   const top=Object.entries(sd.sectors).sort((a,b)=>b[1]-a[1])[0];
+  const activeLine=activeYr?`<span style="color:#64748b;font-size:12px">${sd.active} active total · ${sl(top[0])}</span>`:`<span style="color:#64748b;font-size:12px">${sd.active} active · ${sl(top[0])}</span>`;
   return `<div style="padding:10px 12px;font-family:'DM Sans',sans-serif;color:#0f172a;min-width:170px;background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15)">
     <b style="font-size:15px;color:#0f172a">${nm}</b><br>
-    <span style="color:#dc2626;font-family:'DM Mono',monospace;font-size:20px;font-weight:700">${sd.total}</span>
-    <span style="color:#64748b;font-size:13px"> cases</span><br>
-    <span style="color:#64748b;font-size:12px">${sd.active} active · ${sl(top[0])}</span>
-    ${sd.uncovered_active>0?`<br><span style="color:#ea580c;font-size:11px;font-weight:600">⚠ ${sd.uncovered_active} uncovered</span>`:''}
+    <span style="color:#dc2626;font-family:'DM Mono',monospace;font-size:20px;font-weight:700">${cnt}</span>
+    <span style="color:#64748b;font-size:13px"> case${cnt!==1?'s':''} ${ctxLabel}</span><br>
+    ${activeLine}
+    ${sd.uncovered_active>0&&!activeYr?`<br><span style="color:#ea580c;font-size:11px;font-weight:600">⚠ ${sd.uncovered_active} uncovered</span>`:''}
   </div>`;
 }
 
 function initGlobe(){
   const el=document.getElementById('globeViz');
+  document.getElementById('globe-loading').style.display='none';
   globe=Globe({animateIn:false})(el)
     .width(el.offsetWidth||800).height(el.offsetHeight||600)
+    .showAtmosphere(false)
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
     .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
     .polygonsData(statesGeo.features)
     .polygonCapColor(d=>stateCol(d.properties.name))
-    .polygonSideColor(()=>'rgba(220,38,38,0.15)')
-    .polygonStrokeColor(()=>'rgba(255,255,255,0.7)')
+    .polygonSideColor(d=>{const cnt=cntForState(d.properties.name);return cnt===0?'rgba(0,0,0,0)':`rgba(180,60,0,${(0.15+Math.min(cnt/maxCntContext(),1)*0.35).toFixed(2)})`;  })
+    .polygonStrokeColor(()=>'rgba(255,255,255,0.6)')
     .polygonAltitude(d=>getAlt(d.properties.name))
     .polygonLabel(d=>ttHtml(d))
     .onPolygonClick(d=>selectState(d.properties.name))
-    .onPolygonHover(d=>{
-      globe.polygonAltitude(dd=>{
-        const base=getAlt(dd.properties.name);
-        return(d&&dd===d)?base+0.025:base;
-      });
-    })
     .pointOfView({lat:39.5,lng:-98.35,altitude:1.75},1200);
   globe.controls().autoRotate=true;
   globe.controls().autoRotateSpeed=0.3;
@@ -523,7 +556,6 @@ function initGlobe(){
   const gc=document.getElementById('globe-container');
   gc.addEventListener('mousedown',()=>globe.controls().autoRotate=false);
   gc.addEventListener('touchstart',()=>globe.controls().autoRotate=false);
-  document.getElementById('globe-loading').style.display='none';
   buildYearBar();
   window.addEventListener('resize',()=>{globe.width(el.offsetWidth).height(el.offsetHeight);});
 }
@@ -531,6 +563,7 @@ function initGlobe(){
 function refreshGlobe(){
   if(!globe)return;
   globe.polygonCapColor(d=>stateCol(d.properties.name));
+  globe.polygonAltitude(d=>getAlt(d.properties.name));
 }
 
 // ═══════ STATE SELECTION ═══════
@@ -605,15 +638,15 @@ function buildSpark(yrData){
 
 function buildCaseList(cases){
   let c=[...cases];
-  if(filters.status==='active')c=c.filter(x=>x.status.toLowerCase().includes('active'));
-  if(filters.status==='inactive')c=c.filter(x=>!x.status.toLowerCase().includes('active'));
+  if(filters.status==='active')c=c.filter(x=>x.status.toLowerCase()==='active');
+  if(filters.status==='inactive')c=c.filter(x=>x.status.toLowerCase()==='inactive');
   if(activeSect)c=c.filter(x=>x.sector===activeSect);
   if(activeYr)c=c.filter(x=>x.year&&String(x.year)===activeYr);
   if(filters.cls==='yes')c=c.filter(x=>x.class_action);
   if(filters.cls==='no')c=c.filter(x=>!x.class_action);
   if(!c.length)return '<div style="text-align:center;color:var(--muted);padding:16px;font-size:11px">No cases match current filters</div>';
   return c.slice(0,30).map(x=>{
-    const ia=x.status.toLowerCase().includes('active');
+    const ia=x.status.toLowerCase()==='active';
     const sb=ia?`<span class="badge b-active">${mode==='law'?'Active':'In Court'}</span>`:`<span class="badge b-inactive">${mode==='law'?'Inactive':'Settled'}</span>`;
     const cb=x.class_action?`<span class="badge b-class">${mode==='law'?'Class Action':'Group Case'}</span>`:'';
     const sectb=`<span class="badge b-sector">${sl(x.sector)}</span>`;
@@ -667,6 +700,7 @@ function resetGlobe(){
   document.getElementById('state-placeholder').style.display='';
   document.getElementById('state-briefing').innerHTML='';
 }
+
 // ═══════ TIMELINE ═══════
 function renderTimeline(){
   const ct=document.getElementById('timeline-chart');if(!ct)return;
@@ -716,7 +750,7 @@ function buildYearBar(){
 
 function setYear(y){
   activeYr=(activeYr===y)?null:y;
-  buildYearBar();refreshGlobe();renderTimeline();
+  buildYearBar();refreshGlobe();
   if(selState)renderBriefing(selState);
 }
 
@@ -751,7 +785,7 @@ function renderUncovered(){
   const cases=[];
   for(const[a,sd]of Object.entries(DAIL_DATA.states)){
     for(const c of sd.cases){
-      if(c.media_count===0&&c.status.toLowerCase().includes('active')){
+      if(c.media_count===0&&c.status.toLowerCase()==='active'){
         cases.push({...c,stAbbr:a,stName:sd.name});
       }
     }
@@ -801,8 +835,8 @@ function clearFilters(){
 }
 
 // ═══════ VOICE ═══════
+// ═══════ VOICE ═══════
 let convHistory=[];
-
 function initVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const micBtn=document.getElementById('mic-btn');
@@ -950,44 +984,45 @@ function speakText(text){
     };
     window.speechSynthesis.speak(utt);
   }
-  // Voices may need a moment to load
   if(window.speechSynthesis.getVoices().length)trySpeak();
   else window.speechSynthesis.onvoiceschanged=trySpeak;
 }
 function toggleSpeak(){
-  if(speaking){
-    window.speechSynthesis.cancel();
-    speaking=false;
-    const sb=document.getElementById('speak-btn');
-    if(sb)sb.textContent='🔊 Read Aloud';
-    document.getElementById('mic-status').textContent='Tap 🎙 to speak';
-  }else{
-    const t=document.getElementById('ai-response').innerText;
-    if(t)speakText(t);
-  }
+  if(speaking){window.speechSynthesis.cancel();speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
+  else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
 }
 
-// ═══════ MISTRAL API (Conversational, DAIL-grounded) ═══════
-// __BUILD_SYS_PROMPT_PLACEHOLDER__
-
+// ═══════ MISTRAL API ═══════
 async function submitQuery(){
   const q=document.getElementById('query-box').value.trim();if(!q)return;
   const btn=document.getElementById('query-btn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   const resp=document.getElementById('ai-response');
-  resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Thinking...';
+  resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
   if(!MISTRAL_API_KEY){
     resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Mistral Key ›</button>';
     btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
   
+  const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
+  const pSys="You are a journalist explaining AI lawsuits to everyday people. Use plain language, zero jargon. Make it feel like a news brief. 2-3 sentences max.";
+  const top10=Object.entries(DAIL_DATA.states).sort((a,b)=>b[1].total-a[1].total).slice(0,10).map(([k,v])=>`${k}(${v.total})`).join(',');
+  const ctx=`Dataset: ${DAIL_DATA.total_cases} AI litigation cases (2011-2026) across ${Object.keys(DAIL_DATA.states).length} US states.
+States by volume: ${top10}
+Top sectors: ${Object.entries(DAIL_DATA.sector_totals).slice(0,7).map(([k,v])=>`${k}(${v})`).join(',')}
+Yearly trend: ${Object.entries(DAIL_DATA.year_trends).filter(([y])=>parseInt(y)>=2020).map(([y,v])=>`${y}(${v.total})`).join(',')}
+${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
+Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}`;
+
+  // Build full system prompt + data
+  const sysMsg = (mode==='law'?lSys:pSys)+'\\n\\n'+ctx;
+  
   // Add user message to conversation history
   convHistory.push({role:'user',content:q});
-  // Keep last 10 turns to avoid token limits
   if(convHistory.length>10)convHistory=convHistory.slice(-10);
 
   try{
-    const msgs=[{role:'system',content:buildSystemPrompt()},...convHistory];
+    const msgs=[{role:'system',content:sysMsg},...convHistory];
     const r=await fetch('https://api.mistral.ai/v1/chat/completions',{
       method:'POST',
       headers:{
@@ -1005,22 +1040,17 @@ async function submitQuery(){
     const data=await r.json();
     const text=data.choices?.[0]?.message?.content||'No response.';
 
-    // Add assistant response to history for multi-turn
+    // Add assistant response to history
     convHistory.push({role:'assistant',content:text});
 
-
-    // __RESP_DISPLAY_PLACEHOLDER__
-
-
-    // Auto-speak the response
+    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
+    <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
     speakText(text);
-
-    // If a state is mentioned, highlight it on the globe
     const mentioned=Object.values(DAIL_DATA.states).map(s=>s.name).find(n=>text.includes(n));
     if(mentioned)selectState(mentioned);
   }catch(e){
     resp.innerHTML=`<span style="color:var(--accent)">⚠ Error: ${e.message}</span>`;
-    convHistory.pop(); // Remove the failed user message
+    convHistory.pop(); // Remove failed message
   }
   btn.disabled=false;btn.innerHTML='Ask AI ›';
 }
@@ -1030,114 +1060,251 @@ function setMode(m){
   mode=m;
   document.getElementById('law-btn').className='mode-btn'+(m==='law'?' law-active':'');
   document.getElementById('pub-btn').className='mode-btn'+(m==='public'?' pub-active':'');
-  [['alert-tab-law','alert-tab-pub'],['ab-law-txt','ab-pub-txt'],
-   ['alerts-title-law','alerts-title-pub'],['tl-title-law','tl-title-pub'],
-   ['sect-title-law','sect-title-pub']].forEach(([l,p])=>{
+  [['sect-title-law','sect-title-pub']].forEach(([l,p])=>{
     document.getElementById(l).style.display=m==='law'?'':'none';
     document.getElementById(p).style.display=m==='public'?'':'none';
   });
-  updateChips();renderSectors();renderUncovered();renderTimeline();
+  updateChips();renderSectors();
   if(selState)renderBriefing(selState);
+}
+
+// ═══════ MODE PAGE ═══════
+function openModePage(m){
+  setMode(m);
+  const pg=document.getElementById('mode-page');
+  const hdr=document.getElementById('mp-title');
+  const sub=document.getElementById('mp-subtitle');
+  if(m==='law'){
+    hdr.textContent='\u2696\ufe0f Legal Intelligence Dashboard';
+    sub.textContent='293 AI Litigation Cases \u00b7 GW Law DAIL Dataset';
+  } else {
+    hdr.textContent='📰 The Untold Story';
+    sub.textContent='Active AI lawsuits the media isn\u2019t covering';
+  }
+  pg.classList.add('open');
+  pg.scrollTop=0;
+  if(m==='law')renderLawPage();else renderPublicPage();
+}
+function closeModePage(){
+  document.getElementById('mode-page').classList.remove('open');
+}
+function _bar(label,val,max,color){
+  return `<div class="mp-bar-row">
+    <div class="mp-bar-label" title="${label}">${label}</div>
+    <div class="mp-bar-track"><div class="mp-bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:${color}"></div></div>
+    <div class="mp-bar-val">${val}</div></div>`;
+}
+function _yrBars(years,color){
+  const mx=Math.max(...years.map(([,v])=>v.total));
+  return years.map(([yr,v])=>`<div class="mp-yr-col">
+    <div class="mp-yr-num">${v.total}</div>
+    <div class="mp-yr-fill" style="height:${Math.max(3,(v.total/mx*88)).toFixed(0)}px;background:${color}"></div>
+    <div class="mp-yr-lbl">${yr}</div></div>`).join('');
+}
+function renderLawPage(){
+  const D=DAIL_DATA;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  const topStates=Object.entries(D.states).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
+  const sectors=Object.entries(D.sector_totals).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const years=Object.entries(D.year_trends).filter(([y])=>parseInt(y)>=2015).sort(([a],[b])=>a-b);
+  const covGap=Object.entries(D.states).filter(([,s])=>s.uncovered_active>0)
+    .sort((a,b)=>b[1].uncovered_active-a[1].uncovered_active).slice(0,8);
+  const allCases=Object.values(D.states).flatMap(s=>s.cases||[]);
+  document.getElementById('mp-body').innerHTML=`
+  <div class="mp-stats">
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--text)">${D.total_cases}</div><div class="mp-stat-lbl">Total AI Cases (2011\u20132026)</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--active-green)">${totalActive}</div><div class="mp-stat-lbl">Active Litigations</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--law-blue)">${Object.keys(D.states).length}</div><div class="mp-stat-lbl">States with AI Cases</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--accent2)">${D.total_uncovered_active}</div><div class="mp-stat-lbl">Active \u2014 Zero Coverage</div></div>
+  </div>
+  <div class="mp-grid">
+    <div class="mp-card">
+      <div class="mp-card-title">Top 10 States by Case Volume</div>
+      ${topStates.map(([c,s])=>_bar(s.name||c,s.total,topStates[0][1].total,'var(--accent)')).join('')}
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Sector Breakdown</div>
+      ${sectors.map(([n,v])=>_bar(n,v,sectors[0][1],'var(--law-blue)')).join('')}
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Annual Filing Trends (2015\u20132026)</div>
+      <div class="mp-year-bar">${_yrBars(years,'var(--law-blue)')}</div>
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Coverage Gap \u2014 Unreported Active Cases by State</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px">
+          <th style="text-align:left;padding:4px 0">State</th>
+          <th style="text-align:right;padding:4px 6px">Total</th>
+          <th style="text-align:right;padding:4px 6px">Active</th>
+          <th style="text-align:right;padding:4px 0;color:var(--accent2)">Uncovered</th>
+        </tr></thead><tbody>
+        ${covGap.map(([c,s])=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:7px 0;font-weight:500">${s.name||c}</td>
+          <td style="text-align:right;color:var(--muted);padding:7px 6px">${s.total}</td>
+          <td style="text-align:right;color:var(--active-green);padding:7px 6px">${s.active}</td>
+          <td style="text-align:right;color:var(--accent2);font-weight:700;padding:7px 0">${s.uncovered_active}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mp-card" style="margin-top:18px">
+    <div class="mp-card-title">All Cases \u2014 Full Litigation Index (${allCases.length})</div>
+    <div class="mp-filter-row">
+      <select class="mp-fsel" id="lf-status" onchange="filterLawCases()">
+        <option value="">All Statuses</option>
+        <option value="Active">Active Only</option>
+        <option value="Inactive">Inactive Only</option>
+      </select>
+      <select class="mp-fsel" id="lf-sector" onchange="filterLawCases()">
+        <option value="">All Sectors</option>
+        ${Object.keys(D.sector_totals).sort().map(s=>`<option value="${s}">${s}</option>`).join('')}
+      </select>
+      <select class="mp-fsel" id="lf-year" onchange="filterLawCases()">
+        <option value="">All Years</option>
+        ${Object.keys(D.year_trends).sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join('')}
+      </select>
+      <select class="mp-fsel" id="lf-cov" onchange="filterLawCases()">
+        <option value="">Any Coverage</option>
+        <option value="0">No Media Coverage</option>
+      </select>
+      <span id="lf-count" style="font-size:14px;color:var(--muted);align-self:center;margin-left:4px"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="mp-case-table" id="law-case-table">
+        <thead><tr>
+          <th style="min-width:220px">Case</th>
+          <th>State</th>
+          <th>Year</th>
+          <th>Sector</th>
+          <th>Status</th>
+          <th>Media</th>
+          <th>Class Action</th>
+        </tr></thead>
+        <tbody id="law-case-tbody"></tbody>
+      </table>
+    </div>
+  </div>`;
+  window._lawCases=allCases;
+  filterLawCases();
+}
+function filterLawCases(){
+  const status=document.getElementById('lf-status')?.value||'';
+  const sector=document.getElementById('lf-sector')?.value||'';
+  const year=document.getElementById('lf-year')?.value||'';
+  const cov=document.getElementById('lf-cov')?.value||'';
+  let cases=(window._lawCases||[]).filter(c=>{
+    if(status&&c.status!==status)return false;
+    if(sector&&c.sector!==sector)return false;
+    if(year&&String(c.year)!==year)return false;
+    if(cov==='0'&&c.media_count>0)return false;
+    return true;
+  });
+  const tbody=document.getElementById('law-case-tbody');
+  if(!tbody)return;
+  document.getElementById('lf-count').textContent=`${cases.length} case${cases.length!==1?'s':''}`;
+  tbody.innerHTML=cases.map((c,i)=>{
+    const rowId=`cr-${i}`;
+    const hasMore=(c.description&&c.description.length>0)||c.issues||c.significance||c.orgs;
+    return `<tr class="case-main" onclick="toggleCase('${rowId}')">
+    <td>
+      <div class="mp-case-caption">${c.caption||'—'}</div>
+      ${c.description?`<div class="mp-case-desc">${c.description}</div>`:''}${hasMore?`<button class="mp-read-more" onclick="event.stopPropagation();toggleCase('${rowId}')">+ Read full story</button>`:''}
+    </td>
+    <td style="white-space:nowrap">${c.state||'—'}</td>
+    <td style="white-space:nowrap;font-family:'DM Mono',monospace">${c.year||'—'}</td>
+    <td style="white-space:nowrap;font-size:13px;color:var(--muted)">${c.sector||'—'}</td>
+    <td><span class="mp-badge ${c.status==='Active'?'badge-active':'badge-inactive'}">${c.status||'—'}</span></td>
+    <td style="text-align:center;font-family:'DM Mono',monospace">${c.media_count===0?'<span class="mp-badge badge-uncov">None</span>':c.media_count}</td>
+    <td style="text-align:center">${c.class_action?'Yes':'No'}</td>
+  </tr>
+  <tr id="${rowId}" class="mp-expand-row" style="display:none">
+    <td colspan="7">
+      <div class="mp-expand-body">
+        ${c.description?`<div class="mp-expand-label">What Happened</div><div>${c.description}</div>`:''}
+        ${c.significance?`<div class="mp-expand-label">Why It Matters</div><div style="color:var(--law-blue)">${c.significance}</div>`:''}
+        ${c.issues?`<div class="mp-expand-label">Legal Issues</div><div style="color:var(--muted)">${c.issues}</div>`:''}
+        ${c.orgs?`<div class="mp-expand-label">Organizations</div><div style="color:var(--muted)">${c.orgs}</div>`:''}
+      </div>
+    </td>
+  </tr>`;
+  }).join('');
+}
+function toggleCase(id){
+  const row=document.getElementById(id);
+  if(!row)return;
+  const open=row.style.display!=='none';
+  row.style.display=open?'none':'table-row';
+  const btn=row.previousElementSibling?.querySelector('.mp-read-more');
+  if(btn)btn.textContent=open?'+ Read full story':'\u2212 Collapse';
+}
+function renderPublicPage(){
+  const D=DAIL_DATA;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  const years=Object.entries(D.year_trends).filter(([y])=>parseInt(y)>=2015).sort(([a],[b])=>a-b);
+  const topSectors=Object.entries(D.sector_totals).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const uncovCases=Object.values(D.states)
+    .flatMap(s=>(s.cases||[]).filter(c=>c.status==='Active'&&c.media_count===0))
+    .sort((a,b)=>(b.year||0)-(a.year||0));
+  document.getElementById('mp-body').innerHTML=`
+  <div class="mp-stats">
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--text)">${D.total_cases}</div><div class="mp-stat-lbl">AI Lawsuits Filed in the US</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--active-green)">${totalActive}</div><div class="mp-stat-lbl">Still Active in Courts</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--accent2)">${D.total_uncovered_active}</div><div class="mp-stat-lbl">Active Cases \u2014 No Press</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--law-blue)">${Object.keys(D.states).length}</div><div class="mp-stat-lbl">States Affected</div></div>
+  </div>
+  <div class="mp-grid">
+    <div class="mp-card">
+      <div class="mp-card-title">Which industries are getting sued most?</div>
+      ${topSectors.map(([n,v])=>_bar(n,v,topSectors[0][1],'var(--accent2)')).join('')}
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Is it getting worse? Lawsuits filed each year</div>
+      <div class="mp-year-bar">${_yrBars(years,'var(--accent)')}</div>
+      <p style="font-size:13px;color:var(--muted);margin-top:12px">Filings surged after 2022 \u2014 when mainstream AI tools launched and people began suing.</p>
+    </div>
+  </div>
+  <div class="mp-card" style="margin-top:18px">
+    <div class="mp-card-title">\u26a0 Stories Nobody Is Writing \u2014 ${uncovCases.length} Active Cases With Zero Media Coverage</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:18px">These are real lawsuits happening right now. No reporters. No press. Just people in court fighting AI companies.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${uncovCases.map(c=>`<div class="mp-pub-card">
+        <div class="mp-pub-card-head">${c.caption||'Unnamed Case'}</div>
+        <div class="mp-pub-card-meta">
+          <span>📍 ${c.state||'Unknown'}</span>
+          <span>📅 Filed ${c.year||'?'}</span>
+          <span>🏭 ${c.sector||'Unknown sector'}</span>
+          ${c.class_action?'<span style="color:var(--law-blue);font-weight:600">Class Action</span>':''}
+        </div>
+        ${c.description?`<div class="mp-pub-card-desc">${c.description}</div>`:''}
+        ${c.significance?`<div class="mp-pub-card-sig">Why it matters: ${c.significance}</div>`:''}
+      </div>`).join('')}
+    </div>
+  </div>`;
 }
 
 // ═══════ TABS ═══════
 function switchLeft(t){
-  ['ai','alerts','filters'].forEach(x=>{
+  ['ai','filters'].forEach(x=>{
     document.getElementById('ptab-'+x).classList.toggle('active',x===t);
     document.getElementById('tab-'+x).style.display=x===t?'':'none';
   });
 }
 
 function switchRight(t){
-  ['state','timeline','sectors'].forEach(x=>{
+  ['state','sectors'].forEach(x=>{
     document.getElementById('rtab-'+x).classList.toggle('active',x===t);
     document.getElementById('tab-'+x).style.display=x===t?'':'none';
   });
-  if(t==='timeline')renderTimeline();
   if(t==='sectors')renderSectors();
 }
 """
 
 CLOSE = "\n</script>\n</body>\n</html>"
 
-# JS snippet injected outside triple-quoted string to avoid Python escape issues
-RESP_DISPLAY_JS = (
-    "    var _lbl=document.createElement('div');\n"
-    "    _lbl.style.cssText='font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px';\n"
-    "    var _mode=(mode==='law')?'Legal':'Public';\n"
-    "    _lbl.textContent='AI '+_mode+' Briefing - DAIL Data';\n"
-    "    resp.innerHTML='';\n"
-    "    resp.appendChild(_lbl);\n"
-    "    var _br=document.createElement('p');\n"
-    "    _br.style.cssText='margin:6px 0;line-height:1.6;white-space:pre-wrap';\n"
-    "    _br.textContent=text;\n"
-    "    resp.appendChild(_br);\n"
-    "    var _sb=document.createElement('button');\n"
-    "    _sb.id='speak-btn';\n"
-    "    _sb.textContent='\\uD83D\\uDD0A Read Aloud';\n"
-    "    _sb.setAttribute('style','margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text)');\n"
-    "    _sb.onclick=toggleSpeak;\n"
-    "    resp.appendChild(_sb);\n"
-    "    var _nb=document.createElement('button');\n"
-    "    _nb.textContent='\\uD83D\\uDD04 New Chat';\n"
-    "    _nb.setAttribute('style','margin-top:8px;margin-left:6px;background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--muted)');\n"
-    "    _nb.onclick=function(){convHistory=[];resp.innerHTML='';};\n"
-    "    resp.appendChild(_nb);\n"
-)
-
-
-BUILD_SYS_PROMPT_JS = """
-function buildSystemPrompt(){
-  const statesSummary=Object.entries(DAIL_DATA.states).map(([abbr,s])=>{
-    var top=Object.entries(s.sector_counts||{}).sort(function(a,b){return b[1]-a[1];}).slice(0,3).map(function(e){return e[0]+':'+e[1];}).join(',');
-    return abbr+'|'+s.name+'|total:'+s.total+'|active:'+s.active+'|media:'+s.with_media+'|sectors:'+top;
-  }).join('\\n');
-  var sd=Object.entries(DAIL_DATA.sector_totals).map(function(e){return e[0]+':'+e[1];}).join(', ');
-  var yd=Object.entries(DAIL_DATA.year_trends).filter(function(e){return parseInt(e[0])>=2011;}).map(function(e){return e[0]+':'+e[1].total;}).join(', ');
-  var NL='\\n';
-  var data=[
-    'DAIL DATASET ('+DAIL_DATA.total_cases+' total cases, 2011-2026):',
-    'Total cases: '+DAIL_DATA.total_cases,
-    'Active with zero media: '+DAIL_DATA.total_uncovered_active,
-    '',
-    'Per-state (abbr|name|total|active|media|top_sectors):',
-    statesSummary,
-    '',
-    'Sector totals: '+sd,
-    'Yearly counts: '+yd
-  ].join(NL);
-  var rLaw=[
-    'You are a conversational AI litigation analyst for SueTheMap, using the DAIL database.',
-    '',
-    'CRITICAL RULES:',
-    '- Answer ONLY from DAIL data below. Do NOT invent statistics.',
-    '- If the answer is not in the data, say: I do not have that information in the DAIL dataset.',
-    '- Concise 3-5 sentences, cite specific states and numbers.',
-    '',
-    data
-  ].join(NL);
-  var rPub=[
-    'You are a friendly assistant explaining AI lawsuits for SueTheMap.',
-    '',
-    'CRITICAL RULES:',
-    '- Answer ONLY from DAIL data below. Do NOT make up facts.',
-    '- If the answer is not in the data, say: I do not have that info in the dataset.',
-    '- 2-4 sentences, plain language, no jargon.',
-    '',
-    data
-  ].join(NL);
-  return mode==='law'?rLaw:rPub;
-}
-"""
-
-final = (BODY.replace('CSS_PLACEHOLDER', CSS)
-             .replace('__MISTRAL_KEY_PLACEHOLDER__', MISTRAL_KEY)
-         + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n"
-         + JS
-           .replace('// __BUILD_SYS_PROMPT_PLACEHOLDER__', BUILD_SYS_PROMPT_JS)
-           .replace('// __RESP_DISPLAY_PLACEHOLDER__', RESP_DISPLAY_JS)
-         + CLOSE)
-
+final = BODY.replace('CSS_PLACEHOLDER', CSS) + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n" + JS + CLOSE
+final = final.replace('__MISTRAL_KEY__', MISTRAL_KEY)
 
 with open('sue_the_map.html', 'w', encoding='utf-8') as f:
     f.write(final)
