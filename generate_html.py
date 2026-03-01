@@ -413,31 +413,31 @@ CSS_PLACEHOLDER
 <div id="help-modal">
   <div class="help-card">
     <div class="help-header">
-      <div class="help-title">ℹ️ How to use SueTheMap</div>
+      <div class="help-title">How to use SueTheMap</div>
       <button class="help-close" onclick="document.getElementById('help-modal').classList.remove('open')">×</button>
     </div>
     <div class="help-body">
-      <h3>🌍 The 3D Globe</h3>
+      <h3>The 3D Globe</h3>
       <p>Click and drag to rotate the globe. The height and color of each state represent the volume of active AI lawsuits. <strong>Click any state</strong> to see a detailed briefing of the active cases in that jurisdiction.</p>
       
-      <h3>⚖️ Law Mode vs 🌍 Public Mode</h3>
+      <h3>Law Mode vs Public Mode</h3>
       <ul>
         <li><strong>Law Mode:</strong> Tap the "Law Mode" button to enter the Legal Intelligence Dashboard. This view is for lawyers and researchers, featuring full tables of all 293 cases, filterable by sector, status, and class action.</li>
         <li><strong>Public Mode:</strong> Tap "Public Mode" to see the Untold Story dashboard. This view highlights the human impact, focusing exclusively on lawsuits that have received <strong>zero media coverage</strong>.</li>
       </ul>
 
-      <h3>🤖 AI Legal Assistant</h3>
+      <h3>AI Legal Assistant</h3>
       <p>On the left panel, you can use the AI Query tool.</p>
       <ul>
-        <li><strong>Voice:</strong> Click the microphone 🎙️ icon and start speaking. The AI will answer continuously until you click the mic again.</li>
+        <li><strong>Voice:</strong> Click the microphone icon and start speaking. The AI will answer continuously until you click the mic again.</li>
         <li><strong>Text:</strong> Type your query and hit "Ask AI".</li>
         <li>The AI's personality changes automatically based on whether you are currently in Law Mode or Public Mode.</li>
       </ul>
 
-      <h3>🔍 Filters & Sectors</h3>
+      <h3>Filters & Sectors</h3>
       <p>Use the "Filters" tab on the left to narrow the globe to specific criteria (e.g. Active cases). Use the "Sectors" tab on the right to see which industries (like Copyright, Healthcare, or Employment) are being sued the most.</p>
       
-      <h3>📊 DAIL Data</h3>
+      <h3>DAIL Data</h3>
       <p>All data is sourced from the Database of AI Litigation (DAIL) maintained by George Washington University Law School.</p>
     </div>
   </div>
