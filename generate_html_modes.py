@@ -2,19 +2,20 @@
 import json
 import os
 
-def read_env_key():
-    env_paths = ['.env', '../.env', os.path.join(os.path.dirname(__file__), '.env')]
-    for p in env_paths:
-        if os.path.exists(p):
-            with open(p, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith('GEMINI_API_KEY') or line.startswith('MISTRAL_API_KEY'):
-                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
-                        return val
-    return ''
+# Read Gemini API key from .env (never committed to git)
+def _load_env_key():
+    try:
+        with open('.env', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('GEMINI_API_KEY='):
+                    val = line.split('=', 1)[1].strip()
+                    return val if val and val != 'your_key_here' else ''
+    except FileNotFoundError:
+        pass
+    return os.environ.get('GEMINI_API_KEY', '')
 
-MISTRAL_KEY = read_env_key()
+GEMINI_KEY = _load_env_key()
 
 with open('dail_data.json', 'r', encoding='utf-8') as f:
     dail_json_str = f.read()
@@ -257,22 +258,6 @@ select.fsel:focus{border-color:var(--law-blue);}
 .mp-pub-card-meta{font-size:15px;color:var(--muted);margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;}
 .mp-pub-card-desc{font-size:16px;color:#334155;line-height:1.8;margin-bottom:12px;}
 .mp-pub-card-sig{font-size:15px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:11px;margin-top:9px;}
-/* HELP MODAL */
-#help-modal{position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:2000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px;}
-#help-modal.open{display:flex;animation:fadein .2s ease;}
-@keyframes fadein{from{opacity:0;}to{opacity:1;}}
-.help-card{background:var(--surface);border-radius:16px;width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.2);overflow:hidden;}
-.help-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);}
-.help-title{font-size:20px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;}
-.help-close{background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;}
-.help-close:hover{color:var(--accent);}
-.help-body{padding:24px;overflow-y:auto;font-size:15px;line-height:1.6;color:#334155;}
-.help-body h3{font-size:16px;color:var(--text);margin-top:20px;margin-bottom:8px;font-weight:700;}
-.help-body h3:first-child{margin-top:0;}
-.help-body ul{margin-left:20px;margin-bottom:16px;}
-.help-body li{margin-bottom:6px;}
-#help-btn{background:none;border:2px solid var(--border);color:var(--muted);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;transition:all .2s;font-size:16px;}
-#help-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--text);}
 """
 
 BODY = """\
@@ -303,7 +288,6 @@ CSS_PLACEHOLDER
     <button class="mode-btn law-active" id="law-btn" onclick="openModePage('law')">⚖️ LAW MODE</button>
     <button class="mode-btn" id="pub-btn" onclick="openModePage('public')">🌍 PUBLIC MODE</button>
   </div>
-  <button id="help-btn" onclick="document.getElementById('help-modal').classList.add('open')" title="How to use SueTheMap">?</button>
   <button id="share-btn" onclick="shareApp()" title="Copy shareable link" style="display:none">🔗 Share</button>
   <div id="global-stats">
     <div class="gstat"><span class="gstat-num" id="gs-total" style="color:var(--text)">–</span><span class="gstat-lbl">Cases</span></div>
@@ -319,11 +303,18 @@ CSS_PLACEHOLDER
       <div class="ptab" id="ptab-filters" onclick="switchLeft('filters')">Filters</div>
     </div>
     <div class="tab-content" id="tab-ai">
-      <div id="mic-area" style="display:flex;flex-direction:column;gap:10px;margin-bottom:15px;align-items:center;">
-        <button id="start-ast-btn" onclick="startAssistant()" style="width:100%;padding:10.5px;background:var(--accent);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:15px;transition:0.2s;">Start Assistant</button>
-        <button id="stop-ast-btn" onclick="stopAssistant()" disabled style="width:100%;padding:10.5px;background:var(--surface2);color:var(--muted);border:none;border-radius:8px;font-weight:600;cursor:not-allowed;font-family:'DM Sans',sans-serif;font-size:15px;transition:0.2s;">Stop Assistant</button>
-        <div id="mic-status" style="margin-top:5px;font-size:13px;color:var(--muted);">Click Start to begin</div>
+      <div id="mic-area">
+        <div id="mic-btn" onclick="toggleMic()" title="Click to speak">
+          <svg viewBox="0 0 24 24"><path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V6zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </div>
+        <div id="mic-status">Click 🎙 to speak your question</div>
+      <div style="font-size:10px;color:#94a3b8;text-align:center;margin-top:4px">
+        <kbd style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:9px">/</kbd> to focus search &nbsp;
+        <kbd style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:9px">←→</kbd> cycle states
       </div>
+      </div>
+      <textarea id="query-box" placeholder="e.g. Which states have facial recognition cases with no media coverage?"></textarea>
+      <button id="query-btn" onclick="submitQuery()">Ask AI ›</button>
       <div class="section-label" id="chips-lbl">Suggested Queries</div>
       <div class="chips" id="chips"></div>
       <div id="ai-response"></div>
@@ -402,42 +393,8 @@ CSS_PLACEHOLDER
   </div>
   <div id="mp-body"></div>
 </div>
-
-<div id="help-modal">
-  <div class="help-card">
-    <div class="help-header">
-      <div class="help-title">How to use SueTheMap</div>
-      <button class="help-close" onclick="document.getElementById('help-modal').classList.remove('open')">×</button>
-    </div>
-    <div class="help-body">
-      <h3>The 3D Globe</h3>
-      <p>Click and drag to rotate the globe. The height and color of each state represent the volume of active AI lawsuits. <strong>Click any state</strong> to see a detailed briefing of the active cases in that jurisdiction.</p>
-      
-      <h3>Law Mode vs Public Mode</h3>
-      <ul>
-        <li><strong>Law Mode:</strong> Tap the "Law Mode" button to enter the Legal Intelligence Dashboard. This view is for lawyers and researchers, featuring full tables of all 293 cases, filterable by sector, status, and class action.</li>
-        <li><strong>Public Mode:</strong> Tap "Public Mode" to see the Untold Story dashboard. This view highlights the human impact, focusing exclusively on lawsuits that have received <strong>zero media coverage</strong>.</li>
-      </ul>
-
-      <h3>AI Legal Assistant</h3>
-      <p>On the left panel, you can use the AI Query tool.</p>
-      <ul>
-        <li><strong>Voice:</strong> Click the microphone icon and start speaking. The AI will answer continuously until you click the mic again.</li>
-        <li><strong>Text:</strong> Type your query and hit "Ask AI".</li>
-        <li>The AI's personality changes automatically based on whether you are currently in Law Mode or Public Mode.</li>
-      </ul>
-
-      <h3>Filters & Sectors</h3>
-      <p>Use the "Filters" tab on the left to narrow the globe to specific criteria (e.g. Active cases). Use the "Sectors" tab on the right to see which industries (like Copyright, Healthcare, or Employment) are being sued the most.</p>
-      
-      <h3>DAIL Data</h3>
-      <p>All data is sourced from the Database of AI Litigation (DAIL) maintained by George Washington University Law School.</p>
-    </div>
-  </div>
-</div>
-
 <script>
-let MISTRAL_API_KEY = '__MISTRAL_KEY__' || localStorage.getItem('sue_map_mk') || '';
+let GEMINI_API_KEY = '__GEMINI_KEY__' || localStorage.getItem('sue_map_gk') || '';
 """
 
 JS = """\
@@ -879,105 +836,19 @@ function clearFilters(){
 }
 
 // ═══════ VOICE ═══════
-let convHistory=[];
-let userStoppedMic=true;
 function initVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const micStatus=document.getElementById('mic-status');
-  if(!SR){
-    micStatus.textContent='Voice not supported in this browser';
-    return;
-  }
-  recog=new SR();
-  recog.lang='en-US';
-  recog.continuous=true;
-  recog.interimResults=true;
-
-  recog.onstart=()=>{
-    listening=true;
-    micStatus.textContent='🔴 Listening — speak now';
-  };
-
-  recog.onend=()=>{
-    if(userStoppedMic){
-      listening=false;
-      micStatus.textContent='Assistant stopped';
-    } else {
-      // Browser stopped it automatically after a phrase, restart it to keep listening
-      try{ recog.start(); }catch(e){}
-    }
-  };
-
-  recog.onerror=e=>{
-    if(e.error === 'no-speech' && !userStoppedMic) {
-      // Just restart on silence timeout
-      try{ recog.start(); }catch(err){}
-      return;
-    }
-    listening=false;
-    userStoppedMic=true;
-    document.getElementById('start-ast-btn').disabled=false;
-    document.getElementById('start-ast-btn').style.background='var(--accent)';
-    document.getElementById('start-ast-btn').style.cursor='pointer';
-    document.getElementById('stop-ast-btn').disabled=true;
-    document.getElementById('stop-ast-btn').style.background='var(--surface2)';
-    document.getElementById('stop-ast-btn').style.color='var(--muted)';
-    document.getElementById('stop-ast-btn').style.cursor='not-allowed';
-    micStatus.textContent=e.error==='not-allowed'?'❌ Mic access denied':'❌ Error — try again';
-  };
-
-  recog.onresult=e=>{
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
-    }
-    if(final.trim()){
-      submitQuery(final.trim());
-    }
-  };
+  if(!SR){document.getElementById('mic-btn').style.opacity='0.4';document.getElementById('mic-status').textContent='Voice not supported';return;}
+  recog=new SR();recog.lang='en-US';recog.continuous=false;recog.interimResults=false;
+  recog.onstart=()=>{listening=true;document.getElementById('mic-btn').classList.add('listening');document.getElementById('mic-status').textContent='🔴 Listening...';};
+  recog.onend=()=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-status').textContent='Click 🎙 to speak';};
+  recog.onerror=e=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-status').textContent=e.error==='not-allowed'?'❌ Mic access denied':'Try again';};
+  recog.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('query-box').value=t;submitQuery();};
 }
 
-function startAssistant(){
+function toggleMic(){
   if(!recog)return;
-  userStoppedMic=false;
-  window.speechSynthesis.cancel();
-  speaking=false;
-  
-  document.getElementById('start-ast-btn').disabled=true;
-  document.getElementById('start-ast-btn').style.background='var(--surface2)';
-  document.getElementById('start-ast-btn').style.color='var(--muted)';
-  document.getElementById('start-ast-btn').style.cursor='not-allowed';
-  
-  document.getElementById('stop-ast-btn').disabled=false;
-  document.getElementById('stop-ast-btn').style.background='var(--accent)';
-  document.getElementById('stop-ast-btn').style.color='white';
-  document.getElementById('stop-ast-btn').style.cursor='pointer';
-  
-  document.getElementById('ai-response').innerHTML='';
-  try{recog.start();}
-  catch(e){document.getElementById('mic-status').textContent='Error — try again';}
-}
-
-function stopAssistant(){
-  if(!recog)return;
-  userStoppedMic=true;
-  recog.stop();
-  window.speechSynthesis.cancel();
-  speaking=false;
-  
-  document.getElementById('start-ast-btn').disabled=false;
-  document.getElementById('start-ast-btn').style.background='var(--accent)';
-  document.getElementById('start-ast-btn').style.color='white';
-  document.getElementById('start-ast-btn').style.cursor='pointer';
-  
-  document.getElementById('stop-ast-btn').disabled=true;
-  document.getElementById('stop-ast-btn').style.background='var(--surface2)';
-  document.getElementById('stop-ast-btn').style.color='var(--muted)';
-  document.getElementById('stop-ast-btn').style.cursor='not-allowed';
-  
-  const sb=document.getElementById('speak-btn');
-  if(sb)sb.textContent='Read Aloud';
+  if(listening){recog.stop();}else{try{recog.start();}catch(e){document.getElementById('mic-status').textContent='Error — try again';}}
 }
 
 // ═══════ CHIPS ═══════
@@ -990,21 +861,21 @@ function updateChips(){
   document.getElementById('chips').innerHTML=c.map(q=>`<div class="chip" onclick="useChip(this)" data-q="${q.replace(/"/g,'&quot;')}">💬 ${q.slice(0,40)}${q.length>40?'...':''}</div>`).join('');
 }
 
-function useChip(el){submitQuery(el.dataset.q);}
+function useChip(el){document.getElementById('query-box').value=el.dataset.q;submitQuery();}
 
 // ═══════ API KEY MANAGEMENT ═══════
 function setApiKey(){
-  const k=prompt('Paste your Mistral API key (stored locally in your browser only):');
-  if(k&&k.trim().length>20){
-    MISTRAL_API_KEY=k.trim();
-    localStorage.setItem('sue_map_mk',MISTRAL_API_KEY);
+  const k=prompt('Paste your Google Gemini API key (stored locally in your browser only):');
+  if(k&&k.trim().startsWith('AIza')){
+    GEMINI_API_KEY=k.trim();
+    localStorage.setItem('sue_map_gk',GEMINI_API_KEY);
     document.getElementById('ai-response').innerHTML='<span style="color:var(--active-green)">✓ API key saved. Ask your question!</span>';
   } else if(k!==null){
-    alert('That does not look like a Mistral key. Try again.');
+    alert('That does not look like a Gemini key (should start with AIza…). Try again.');
   }
 }
 function clearApiKey(){
-  localStorage.removeItem('sue_map_mk');MISTRAL_API_KEY='';
+  localStorage.removeItem('sue_map_gk');GEMINI_API_KEY='';
   alert('API key cleared.');
 }
 
@@ -1013,62 +884,31 @@ let speaking=false;
 function speakText(text){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  const clean=text.replace(/<[^>]*>/g,'').replace(/[*]+/g,'').trim();
-  const utt=new SpeechSynthesisUtterance(clean);
-  utt.rate=0.92;utt.pitch=1.05;utt.volume=1;
-  // Try to get a natural-sounding voice
-  function trySpeak(){
-    const voices=window.speechSynthesis.getVoices();
-    const pref=voices.find(v=>v.lang==='en-US'&&(v.name.includes('Samantha')||v.name.includes('Google')||v.name.includes('Female')))
-      ||voices.find(v=>v.lang==='en-US')
-      ||voices[0];
-    if(pref)utt.voice=pref;
-    utt.onstart=()=>{
-      speaking=true;
-      if(listening){ recog.stop(); } // Pause mic while AI speaks
-      const sb=document.getElementById('speak-btn');
-      if(sb)sb.textContent='⏹ Stop Speaking';
-      document.getElementById('mic-status').textContent='🔊 Speaking...';
-    };
-    utt.onend=()=>{
-      speaking=false;
-      const sb=document.getElementById('speak-btn');
-      if(sb)sb.textContent='🔊 Read Aloud';
-      // If we were in continuous voice mode, resume listening
-      if(document.getElementById('mic-btn').classList.contains('listening')){
-        try{ recog.start(); }catch(e){}
-      } else {
-        document.getElementById('mic-status').textContent='Waiting to speak...';
-      }
-    };
-    utt.onerror=()=>{
-      speaking=false;
-      if(!userStoppedMic){
-        try{ recog.start(); }catch(e){}
-      }
-    };
-    window.speechSynthesis.speak(utt);
-  }
-  if(window.speechSynthesis.getVoices().length)trySpeak();
-  else window.speechSynthesis.onvoiceschanged=trySpeak;
+  const utt=new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,''));
+  utt.rate=0.95;utt.pitch=1;utt.volume=1;
+  const voices=window.speechSynthesis.getVoices();
+  const pref=voices.find(v=>v.lang==='en-US'&&v.name.includes('Female'))||voices.find(v=>v.lang==='en-US')||voices[0];
+  if(pref)utt.voice=pref;
+  utt.onstart=()=>{speaking=true;document.getElementById('speak-btn').textContent='⏹ Stop';}
+  utt.onend=()=>{speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
+  window.speechSynthesis.speak(utt);
 }
 function toggleSpeak(){
   if(speaking){window.speechSynthesis.cancel();speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
   else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
 }
 
-// ═══════ MISTRAL API ═══════
-async function submitQuery(queryText){
-  if(!queryText)return;
-  const q=queryText.trim();if(!q)return;
-  document.getElementById('ai-response').innerHTML='';
+// ═══════ GEMINI API ═══════
+async function submitQuery(){
+  const q=document.getElementById('query-box').value.trim();if(!q)return;
+  const btn=document.getElementById('query-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
-  if(!MISTRAL_API_KEY){
-    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Mistral Key ›</button>';
-    return;
+  if(!GEMINI_API_KEY){
+    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Gemini Key ›</button>';
+    btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
-  
   const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
   const pSys="You are a journalist explaining AI lawsuits to everyday people. Use plain language, zero jargon. Make it feel like a news brief. 2-3 sentences max.";
   const top10=Object.entries(DAIL_DATA.states).sort((a,b)=>b[1].total-a[1].total).slice(0,10).map(([k,v])=>`${k}(${v.total})`).join(',');
@@ -1077,37 +917,20 @@ States by volume: ${top10}
 Top sectors: ${Object.entries(DAIL_DATA.sector_totals).slice(0,7).map(([k,v])=>`${k}(${v})`).join(',')}
 Yearly trend: ${Object.entries(DAIL_DATA.year_trends).filter(([y])=>parseInt(y)>=2020).map(([y,v])=>`${y}(${v.total})`).join(',')}
 ${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
-Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}`;
-
-  // Build full system prompt + data
-  const sysMsg = (mode==='law'?lSys:pSys)+'\\n\\n'+ctx;
-  
-  // Add user message to conversation history
-  convHistory.push({role:'user',content:q});
-  if(convHistory.length>10)convHistory=convHistory.slice(-10);
-
+Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
+Question: ${q}`;
   try{
-    const msgs=[{role:'system',content:sysMsg},...convHistory];
-    const r=await fetch('https://api.mistral.ai/v1/chat/completions',{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${MISTRAL_API_KEY}`
-      },
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'mistral-small-latest',
-        messages:msgs,
-        temperature:0.3,
-        max_tokens:500
+        contents:[{role:'user',parts:[{text:(mode==='law'?lSys:pSys)+'\\n\\n'+ctx}]}],
+        generationConfig:{maxOutputTokens:400}
       })
     });
-    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||`HTTP ${r.status}`);}
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
     const data=await r.json();
-    const text=data.choices?.[0]?.message?.content||'No response.';
-
-    // Add assistant response to history
-    convHistory.push({role:'assistant',content:text});
-
+    const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
     resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
     <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
     speakText(text);
@@ -1115,8 +938,8 @@ Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}`;
     if(mentioned)selectState(mentioned);
   }catch(e){
     resp.innerHTML=`<span style="color:var(--accent)">⚠ Error: ${e.message}</span>`;
-    convHistory.pop(); // Remove failed message
   }
+  btn.disabled=false;btn.innerHTML='Ask AI ›';
 }
 
 // ═══════ MODE SWITCH ═══════
@@ -1368,7 +1191,7 @@ function switchRight(t){
 CLOSE = "\n</script>\n</body>\n</html>"
 
 final = BODY.replace('CSS_PLACEHOLDER', CSS) + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n" + JS + CLOSE
-final = final.replace('__MISTRAL_KEY__', MISTRAL_KEY)
+final = final.replace('__GEMINI_KEY__', GEMINI_KEY)
 
 with open('sue_the_map.html', 'w', encoding='utf-8') as f:
     f.write(final)
