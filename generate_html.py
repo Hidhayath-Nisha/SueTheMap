@@ -511,7 +511,7 @@ function stateCol(name){
   let r,g,b;
   if(t<0.5){const tt=t/0.5;r=Math.round(254-5*tt);g=Math.round(240-125*tt);b=Math.round(138-116*tt);}
   else{const tt=(t-0.5)/0.5;r=Math.round(249-64*tt);g=Math.round(115-87*tt);b=Math.round(22+6*tt);}
-  const a=(t*0.97).toFixed(2);
+  const a=(0.35+Math.sqrt(t)*0.62).toFixed(2); // sqrt scale: 1 case=0.42, 10=0.56, max=0.97
   return `rgba(${r},${g},${b},${a})`;
 }
 
