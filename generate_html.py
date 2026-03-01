@@ -838,17 +838,80 @@ function clearFilters(){
 // ═══════ VOICE ═══════
 function initVoice(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){document.getElementById('mic-btn').style.opacity='0.4';document.getElementById('mic-status').textContent='Voice not supported';return;}
-  recog=new SR();recog.lang='en-US';recog.continuous=false;recog.interimResults=false;
-  recog.onstart=()=>{listening=true;document.getElementById('mic-btn').classList.add('listening');document.getElementById('mic-status').textContent='🔴 Listening...';};
-  recog.onend=()=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-status').textContent='Click 🎙 to speak';};
-  recog.onerror=e=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');document.getElementById('mic-status').textContent=e.error==='not-allowed'?'❌ Mic access denied':'Try again';};
-  recog.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('query-box').value=t;submitQuery();};
+  const micBtn=document.getElementById('mic-btn');
+  const micStatus=document.getElementById('mic-status');
+  if(!SR){
+    micBtn.style.opacity='0.4';
+    micStatus.textContent='Voice not supported in this browser';
+    return;
+  }
+  recog=new SR();
+  recog.lang='en-US';
+  recog.continuous=true;
+  recog.interimResults=true;
+
+  recog.onstart=()=>{
+    listening=true;
+    micBtn.classList.add('listening');
+    micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
+    micStatus.textContent='🔴 Listening — speak now';
+  };
+
+  recog.onend=()=>{
+    if(userStoppedMic){
+      listening=false;
+      micBtn.classList.remove('listening');
+      micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
+      micStatus.textContent='Tap 🎙 to speak';
+    } else {
+      // Browser stopped it automatically after a phrase, restart it to keep listening
+      try{ recog.start(); }catch(e){}
+    }
+  };
+
+  recog.onerror=e=>{
+    if(e.error === 'no-speech' && !userStoppedMic) {
+      // Just restart on silence timeout
+      try{ recog.start(); }catch(err){}
+      return;
+    }
+    listening=false;
+    userStoppedMic=true;
+    micBtn.classList.remove('listening');
+    micStatus.textContent=e.error==='not-allowed'?'❌ Mic access denied':'❌ Error — try again';
+  };
+
+  recog.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('query-box').value=final||interim;
+    if(final.trim()){
+      submitQuery();
+    }
+  };
 }
 
+let userStoppedMic=true;
 function toggleMic(){
   if(!recog)return;
-  if(listening){recog.stop();}else{try{recog.start();}catch(e){document.getElementById('mic-status').textContent='Error — try again';}}
+  if(listening && !userStoppedMic){
+    userStoppedMic=true; // Mark as explicitly stopped
+    recog.stop();
+    window.speechSynthesis.cancel();
+    speaking=false;
+    const sb=document.getElementById('speak-btn');
+    if(sb)sb.textContent='🔊 Read Aloud';
+  }else{
+    userStoppedMic=false; // Mark as running
+    window.speechSynthesis.cancel();
+    speaking=false;
+    document.getElementById('query-box').value='';
+    try{recog.start();}
+    catch(e){document.getElementById('mic-status').textContent='Error — try again';}
+  }
 }
 
 // ═══════ CHIPS ═══════
@@ -884,18 +947,57 @@ let speaking=false;
 function speakText(text){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  const utt=new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g,''));
-  utt.rate=0.95;utt.pitch=1;utt.volume=1;
-  const voices=window.speechSynthesis.getVoices();
-  const pref=voices.find(v=>v.lang==='en-US'&&v.name.includes('Female'))||voices.find(v=>v.lang==='en-US')||voices[0];
-  if(pref)utt.voice=pref;
-  utt.onstart=()=>{speaking=true;document.getElementById('speak-btn').textContent='⏹ Stop';}
-  utt.onend=()=>{speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
-  window.speechSynthesis.speak(utt);
+  const clean=text.replace(/<[^>]*>/g,'').replace(/[*]+/g,'').trim();
+  const utt=new SpeechSynthesisUtterance(clean);
+  utt.rate=0.92;utt.pitch=1.05;utt.volume=1;
+  // Try to get a natural-sounding voice
+  function trySpeak(){
+    const voices=window.speechSynthesis.getVoices();
+    const pref=voices.find(v=>v.lang==='en-US'&&(v.name.includes('Samantha')||v.name.includes('Google')||v.name.includes('Female')))
+      ||voices.find(v=>v.lang==='en-US')
+      ||voices[0];
+    if(pref)utt.voice=pref;
+    utt.onstart=()=>{
+      speaking=true;
+      if(listening){ recog.stop(); } // Pause mic while AI speaks
+      const sb=document.getElementById('speak-btn');
+      if(sb)sb.textContent='⏹ Stop Speaking';
+      document.getElementById('mic-status').textContent='🔊 Speaking...';
+    };
+    utt.onend=()=>{
+      speaking=false;
+      const sb=document.getElementById('speak-btn');
+      if(sb)sb.textContent='🔊 Read Aloud';
+      // If we were in continuous voice mode, resume listening
+      if(document.getElementById('mic-btn').classList.contains('listening')){
+        try{ recog.start(); }catch(e){}
+      } else {
+        document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+      }
+    };
+    utt.onerror=()=>{
+      speaking=false;
+      if(document.getElementById('mic-btn').classList.contains('listening')){
+        try{ recog.start(); }catch(e){}
+      }
+    };
+    window.speechSynthesis.speak(utt);
+  }
+  // Voices may need a moment to load
+  if(window.speechSynthesis.getVoices().length)trySpeak();
+  else window.speechSynthesis.onvoiceschanged=trySpeak;
 }
 function toggleSpeak(){
-  if(speaking){window.speechSynthesis.cancel();speaking=false;document.getElementById('speak-btn').textContent='🔊 Read Aloud';}
-  else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
+  if(speaking){
+    window.speechSynthesis.cancel();
+    speaking=false;
+    const sb=document.getElementById('speak-btn');
+    if(sb)sb.textContent='🔊 Read Aloud';
+    document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+  }else{
+    const t=document.getElementById('ai-response').innerText;
+    if(t)speakText(t);
+  }
 }
 
 // ═══════ GEMINI API ═══════
