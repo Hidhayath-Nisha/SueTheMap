@@ -1,5 +1,21 @@
 """Generate sue_the_map.html — single self-contained file."""
 import json
+import os
+
+# Read Gemini API key from .env (never committed to git)
+def _load_env_key():
+    try:
+        with open('.env', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('GEMINI_API_KEY='):
+                    val = line.split('=', 1)[1].strip()
+                    return val if val and val != 'your_key_here' else ''
+    except FileNotFoundError:
+        pass
+    return os.environ.get('GEMINI_API_KEY', '')
+
+GEMINI_KEY = _load_env_key()
 
 with open('dail_data.json', 'r', encoding='utf-8') as f:
     dail_json_str = f.read()
@@ -326,7 +342,7 @@ CSS_PLACEHOLDER
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
 <script>
-let GEMINI_API_KEY = localStorage.getItem('sue_map_gk') || '';
+let GEMINI_API_KEY = '__GEMINI_KEY__' || localStorage.getItem('sue_map_gk') || '';
 """
 
 JS = """\
@@ -838,12 +854,11 @@ ${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
 Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
 Question: ${q}`;
   try{
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        system_instruction:{parts:[{text:mode==='law'?lSys:pSys}]},
-        contents:[{role:'user',parts:[{text:ctx}]}],
+        contents:[{role:'user',parts:[{text:(mode==='law'?lSys:pSys)+'\n\n'+ctx}]}],
         generationConfig:{maxOutputTokens:400}
       })
     });
@@ -897,6 +912,7 @@ function switchRight(t){
 CLOSE = "\n</script>\n</body>\n</html>"
 
 final = BODY.replace('CSS_PLACEHOLDER', CSS) + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n" + JS + CLOSE
+final = final.replace('__GEMINI_KEY__', GEMINI_KEY)
 
 with open('sue_the_map.html', 'w', encoding='utf-8') as f:
     f.write(final)
