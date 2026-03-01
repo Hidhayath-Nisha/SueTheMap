@@ -445,19 +445,37 @@ function cntForState(name){
   return sd.total;
 }
 
+let _cachedMax=null,_cachedMaxKey='';
+function maxCntContext(){
+  const key=(activeYr||'')+(activeSect||'')+(filters.status||'');
+  if(_cachedMaxKey===key&&_cachedMax!==null)return _cachedMax;
+  _cachedMaxKey=key;
+  _cachedMax=Math.max(1,...Object.values(DAIL_DATA.states).map(sd=>{
+    if(activeSect)return sd.sectors[activeSect]||0;
+    if(activeYr)return sd.years[activeYr]||0;
+    if(filters.status==='active')return sd.active||0;
+    if(filters.status==='inactive')return(sd.total-sd.active)||0;
+    return sd.total;
+  }));
+  return _cachedMax;
+}
+
 function stateCol(name){
   const cnt=cntForState(name);
-  if(cnt===0)return 'rgba(150,180,220,0.18)';
-  const t=Math.min(cnt/103,1);
-  if(t<0.08)return 'rgba(59,130,246,0.45)';
-  if(t<0.25){const tt=(t-.08)/.17;const a=0.45+tt*0.2;return `rgba(${Math.round(59+tt*130)},${Math.round(130-tt*80)},${Math.round(246-tt*200)},${a.toFixed(2)})`; }
-  if(t<0.55){const tt=(t-.25)/.3;return `rgba(${Math.round(189+tt*50)},${Math.round(50-tt*30)},${Math.round(46-tt*20)},${(0.65+tt*0.15).toFixed(2)})`; }
-  return `rgba(${Math.round(220+tt*20)},${Math.round(20)},${Math.round(20)},0.88)`;
+  if(cnt===0)return 'rgba(0,0,0,0)';
+  const t=Math.min(cnt/maxCntContext(),1);
+  // transparent → pale yellow → orange → deep red, opacity linear from 0
+  let r,g,b;
+  if(t<0.5){const tt=t/0.5;r=Math.round(254-5*tt);g=Math.round(240-125*tt);b=Math.round(138-116*tt);}
+  else{const tt=(t-0.5)/0.5;r=Math.round(249-64*tt);g=Math.round(115-87*tt);b=Math.round(22+6*tt);}
+  return `rgba(${r},${g},${b},${(t*0.95).toFixed(2)})`;
 }
 
 function getAlt(name){
-  const a=N2A[name],sd=a&&DAIL_DATA.states[a];
-  return sd?0.005+(sd.total/103)*0.045:0.005;
+  const cnt=cntForState(name);
+  if(cnt===0)return 0.005;
+  const t=Math.min(cnt/maxCntContext(),1);
+  return 0.005+Math.sqrt(t)*0.045;
 }
 
 function ttHtml(d){
