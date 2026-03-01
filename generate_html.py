@@ -1164,7 +1164,7 @@ function renderPublicPage(){
 
 // ═══════ TABS ═══════
 function switchLeft(t){
-  ['ai','alerts','filters'].forEach(x=>{
+  ['ai','filters'].forEach(x=>{
     document.getElementById('ptab-'+x).classList.toggle('active',x===t);
     document.getElementById('tab-'+x).style.display=x===t?'':'none';
   });
