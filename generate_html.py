@@ -1370,10 +1370,10 @@ CLOSE = "\n</script>\n</body>\n</html>"
 final = BODY.replace('CSS_PLACEHOLDER', CSS) + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n" + JS + CLOSE
 final = final.replace('__MISTRAL_KEY__', MISTRAL_KEY)
 
-with open('sue_the_map.html', 'w', encoding='utf-8') as f:
+with open('index.html', 'w', encoding='utf-8') as f:
     f.write(final)
 
 size = len(final)
-print(f"Generated sue_the_map.html")
+print(f"Generated index.html")
 print(f"File size: {size // 1024} KB ({size:,} bytes)")
-print("Open sue_the_map.html in Chrome or Edge to run it.")
+print("Open index.html in Chrome or Edge to run it.")
