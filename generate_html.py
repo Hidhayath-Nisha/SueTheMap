@@ -198,7 +198,7 @@ select.fsel:focus{border-color:var(--law-blue);}
 }
 /* MODE PAGE */
 #mode-page{position:fixed;inset:0;background:var(--bg);z-index:1000;overflow-y:auto;
-  display:none;}
+  display:none;font-size:17px;}
 #mode-page.open{display:block;animation:mpIn .25s ease;}
 @keyframes mpIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
 #mp-header{position:sticky;top:0;background:var(--surface);border-bottom:2px solid var(--border);
@@ -211,18 +211,18 @@ select.fsel:focus{border-color:var(--law-blue);}
 #mp-body{padding:28px 32px;max-width:1200px;margin:0 auto;font-size:15px;}
 .mp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
 .mp-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
-.mp-stat-num{font-family:'DM Mono',monospace;font-size:40px;font-weight:700;line-height:1;}
-.mp-stat-lbl{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:7px;}
+.mp-stat-num{font-family:'DM Mono',monospace;font-size:46px;font-weight:700;line-height:1;}
+.mp-stat-lbl{font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:7px;}
 .mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 .mp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;}
-.mp-card-title{font-size:14px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+.mp-card-title{font-size:16px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
   font-weight:600;margin-bottom:18px;}
-.mp-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
-.mp-bar-label{font-size:15px;color:var(--text);width:140px;flex-shrink:0;
+.mp-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.mp-bar-label{font-size:17px;color:var(--text);width:150px;flex-shrink:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mp-bar-track{flex:1;height:11px;background:var(--surface2);border-radius:6px;overflow:hidden;}
+.mp-bar-track{flex:1;height:13px;background:var(--surface2);border-radius:6px;overflow:hidden;}
 .mp-bar-fill{height:100%;border-radius:6px;}
-.mp-bar-val{font-size:14px;color:var(--muted);font-family:'DM Mono',monospace;width:34px;text-align:right;}
+.mp-bar-val{font-size:16px;color:var(--muted);font-family:'DM Mono',monospace;width:36px;text-align:right;}
 .mp-year-bar{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:12px;padding-bottom:2px;}
 .mp-yr-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
 .mp-yr-fill{width:100%;border-radius:3px 3px 0 0;min-height:3px;}
@@ -232,32 +232,32 @@ select.fsel:focus{border-color:var(--law-blue);}
   border-left:3px solid var(--accent2);}
 .mp-story-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
 .mp-story-meta{font-size:13px;color:var(--muted);line-height:1.6;}
-.mp-case-table{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px;}
-.mp-case-table th{text-align:left;padding:10px 10px;font-size:13px;text-transform:uppercase;
+.mp-case-table{width:100%;border-collapse:collapse;font-size:16px;margin-top:6px;}
+.mp-case-table th{text-align:left;padding:11px 10px;font-size:14px;text-transform:uppercase;
   letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;}
-.mp-case-table td{padding:13px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+.mp-case-table td{padding:15px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
 .mp-case-table tr.case-main:hover td{background:var(--surface2);cursor:pointer;}
-.mp-case-caption{font-weight:600;color:var(--text);margin-bottom:5px;font-size:15px;}
-.mp-case-desc{font-size:14px;color:var(--muted);line-height:1.6;
+.mp-case-caption{font-weight:600;color:var(--text);margin-bottom:5px;font-size:17px;}
+.mp-case-desc{font-size:15px;color:var(--muted);line-height:1.65;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.mp-case-sig{font-size:13px;color:var(--law-blue);font-style:italic;margin-top:5px;}
-.mp-expand-row td{background:var(--surface2);padding:18px 22px!important;border-bottom:2px solid var(--border);}
-.mp-expand-body{font-size:14px;line-height:1.75;color:var(--text);}
-.mp-expand-label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-top:14px;margin-bottom:5px;}
-.mp-read-more{font-size:13px;color:var(--law-blue);cursor:pointer;margin-top:4px;display:inline-block;border:none;background:none;padding:0;font-family:'DM Sans',sans-serif;}
-.mp-badge{display:inline-block;padding:4px 10px;border-radius:10px;font-size:13px;font-weight:600;}
+.mp-case-sig{font-size:14px;color:var(--law-blue);font-style:italic;margin-top:5px;}
+.mp-expand-row td{background:var(--surface2);padding:20px 24px!important;border-bottom:2px solid var(--border);}
+.mp-expand-body{font-size:16px;line-height:1.8;color:var(--text);}
+.mp-expand-label{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-top:16px;margin-bottom:6px;}
+.mp-read-more{font-size:14px;color:var(--law-blue);cursor:pointer;margin-top:5px;display:inline-block;border:none;background:none;padding:0;font-family:'DM Sans',sans-serif;}
+.mp-badge{display:inline-block;padding:4px 11px;border-radius:10px;font-size:14px;font-weight:600;}
 .badge-active{background:#dcfce7;color:#15803d;}
 .badge-inactive{background:#f1f5f9;color:#64748b;}
 .badge-uncov{background:#fff7ed;color:#c2410c;}
 .mp-filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
-.mp-fsel{border:1px solid var(--border);border-radius:7px;padding:9px 14px;
-  font-size:15px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;cursor:pointer;}
+.mp-fsel{border:1px solid var(--border);border-radius:7px;padding:10px 16px;
+  font-size:16px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;cursor:pointer;}
 .mp-pub-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:22px;border-left:4px solid var(--accent2);}
-.mp-pub-card-head{font-size:17px;font-weight:700;color:var(--text);margin-bottom:7px;}
-.mp-pub-card-meta{font-size:14px;color:var(--muted);margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap;}
-.mp-pub-card-desc{font-size:15px;color:#334155;line-height:1.75;margin-bottom:10px;}
-.mp-pub-card-sig{font-size:14px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:8px;}
+  padding:24px;border-left:4px solid var(--accent2);}
+.mp-pub-card-head{font-size:19px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.mp-pub-card-meta{font-size:15px;color:var(--muted);margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;}
+.mp-pub-card-desc{font-size:16px;color:#334155;line-height:1.8;margin-bottom:12px;}
+.mp-pub-card-sig{font-size:15px;color:var(--law-blue);font-style:italic;border-top:1px solid var(--border);padding-top:11px;margin-top:9px;}
 """
 
 BODY = """\
@@ -300,10 +300,6 @@ CSS_PLACEHOLDER
   <div id="left-panel">
     <div class="panel-tabs">
       <div class="ptab active" id="ptab-ai" onclick="switchLeft('ai')">AI Query</div>
-      <div class="ptab" id="ptab-alerts" onclick="switchLeft('alerts')">
-        <span id="alert-tab-law">⚠ Coverage Gap</span>
-        <span id="alert-tab-pub" style="display:none">📰 Untold Stories</span>
-      </div>
       <div class="ptab" id="ptab-filters" onclick="switchLeft('filters')">Filters</div>
     </div>
     <div class="tab-content" id="tab-ai">
@@ -323,18 +319,7 @@ CSS_PLACEHOLDER
       <div class="chips" id="chips"></div>
       <div id="ai-response"></div>
     </div>
-    <div class="tab-content" id="tab-alerts" style="display:none">
-      <div class="alert-banner">
-        <div class="ab-count" id="ab-num">–</div>
-        <div class="ab-text">
-          <span id="ab-law-txt">active AI lawsuits have received <strong>NO</strong> media coverage</span>
-          <span id="ab-pub-txt" style="display:none">AI lawsuits have <strong>never been covered</strong> by press</span>
-        </div>
-      </div>
-      <div class="section-label" id="alerts-title-law">Underreported Litigation — Coverage Gap Analysis</div>
-      <div class="section-label" id="alerts-title-pub" style="display:none">Stories Nobody Is Covering Yet</div>
-      <div id="uncov-list"></div>
-    </div>
+
     <div class="tab-content" id="tab-filters" style="display:none">
       <div class="section-label">Status</div>
       <select class="fsel" id="f-status" onchange="applyFilters()">
@@ -491,7 +476,6 @@ function initStats(){
   animCount('gs-active',totalActive);
   document.getElementById('gs-states').textContent=Object.keys(D.states).length;
   animCount('gs-uncov',D.total_uncovered_active);
-  document.getElementById('ab-num').textContent=D.total_uncovered_active;
 }
 
 // ═══════ GLOBE ═══════
@@ -953,13 +937,12 @@ function setMode(m){
   mode=m;
   document.getElementById('law-btn').className='mode-btn'+(m==='law'?' law-active':'');
   document.getElementById('pub-btn').className='mode-btn'+(m==='public'?' pub-active':'');
-  [['alert-tab-law','alert-tab-pub'],['ab-law-txt','ab-pub-txt'],
-   ['alerts-title-law','alerts-title-pub'],['tl-title-law','tl-title-pub'],
+  [['tl-title-law','tl-title-pub'],
    ['sect-title-law','sect-title-pub']].forEach(([l,p])=>{
     document.getElementById(l).style.display=m==='law'?'':'none';
     document.getElementById(p).style.display=m==='public'?'':'none';
   });
-  updateChips();renderSectors();renderUncovered();renderTimeline();
+  updateChips();renderSectors();renderTimeline();
   if(selState)renderBriefing(selState);
 }
 
