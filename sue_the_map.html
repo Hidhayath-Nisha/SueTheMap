@@ -533,12 +533,14 @@ function maxCntContext(){
 
 function stateCol(name){
   const cnt=cntForState(name);
-  if(cnt===0)return 'rgba(100,116,139,0.45)';
+  if(cnt===0)return 'rgba(71,85,105,0.55)';
   const t=Math.min(cnt/maxCntContext(),1);
-  if(t<0.08)return 'rgba(59,130,246,0.6)';
-  if(t<0.25){const tt=(t-.08)/.17;return `rgba(${Math.round(59+tt*130)},${Math.round(130-tt*80)},${Math.round(246-tt*200)},${(0.6+tt*0.15).toFixed(2)})`; }
-  if(t<0.55){const tt=(t-.25)/.3;return `rgba(${Math.round(189+tt*50)},${Math.round(50-tt*30)},${Math.round(46-tt*20)},${(0.75+tt*0.1).toFixed(2)})`; }
-  return `rgba(${Math.round(220+t*20)},20,20,0.9)`;
+  // white-blue → blue → orange → deep red, all high opacity
+  if(t<0.12)return `rgba(147,197,253,0.85)`;
+  if(t<0.3){const tt=(t-.12)/.18;return `rgba(${Math.round(147-88*tt)},${Math.round(197-97*tt)},${Math.round(253-7*tt)},0.88)`;}
+  if(t<0.55){const tt=(t-.3)/.25;return `rgba(${Math.round(59+196*tt)},${Math.round(100-80*tt)},${Math.round(246-220*tt)},0.90)`;}
+  if(t<0.8){const tt=(t-.55)/.25;return `rgba(${Math.round(255)},${Math.round(20+60*(1-tt))},20,0.92)`;}
+  return 'rgba(185,10,10,0.97)';
 }
 
 function getAlt(name){
@@ -567,12 +569,13 @@ function initGlobe(){
   document.getElementById('globe-loading').style.display='none';
   globe=Globe({animateIn:false})(el)
     .width(el.offsetWidth||800).height(el.offsetHeight||600)
+    .showAtmosphere(false)
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
     .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
     .polygonsData(statesGeo.features)
     .polygonCapColor(d=>stateCol(d.properties.name))
-    .polygonSideColor(()=>'rgba(220,38,38,0.15)')
-    .polygonStrokeColor(()=>'rgba(255,255,255,0.7)')
+    .polygonSideColor(d=>{const cnt=cntForState(d.properties.name);return cnt===0?'rgba(71,85,105,0.3)':'rgba(150,0,0,0.5)';})
+    .polygonStrokeColor(()=>'rgba(255,255,255,0.6)')
     .polygonAltitude(d=>getAlt(d.properties.name))
     .polygonLabel(d=>ttHtml(d))
     .onPolygonClick(d=>selectState(d.properties.name))
