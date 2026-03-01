@@ -360,7 +360,6 @@ CSS_PLACEHOLDER
   <div id="right-panel">
     <div id="right-tabs">
       <div class="rtab active" id="rtab-state" onclick="switchRight('state')">State</div>
-      <div class="rtab" id="rtab-timeline" onclick="switchRight('timeline')">Timeline</div>
       <div class="rtab" id="rtab-sectors" onclick="switchRight('sectors')">Sectors</div>
     </div>
     <div id="right-body">
@@ -371,11 +370,7 @@ CSS_PLACEHOLDER
         </div>
         <div id="state-briefing"></div>
       </div>
-      <div id="tab-timeline" style="display:none">
-        <div class="section-label" id="tl-title-law">Annual Case Filing Trends (2011–2026)</div>
-        <div class="section-label" id="tl-title-pub" style="display:none">AI Lawsuits Filed Each Year</div>
-        <div id="timeline-chart"></div>
-      </div>
+
       <div id="tab-sectors" style="display:none">
         <div class="section-label" id="sect-title-law">National Sector Breakdown</div>
         <div class="section-label" id="sect-title-pub" style="display:none">What AI Lawsuits Are About</div>
@@ -455,7 +450,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const c=/Chrome/.test(navigator.userAgent)&&!/Edg/.test(navigator.userAgent);
   const e=/Edg/.test(navigator.userAgent);
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
-  initStats(); populateFilters(); renderSectors(); renderTimeline();
+  initStats(); populateFilters(); renderSectors();
   initVoice(); updateChips(); loadGlobe(); initKeyboard();
   // Auto-select the state with most cases after globe loads
   setTimeout(()=>{
@@ -741,7 +736,7 @@ function buildYearBar(){
 
 function setYear(y){
   activeYr=(activeYr===y)?null:y;
-  buildYearBar();refreshGlobe();renderTimeline();
+  buildYearBar();refreshGlobe();
   if(selState)renderBriefing(selState);
 }
 
@@ -937,12 +932,11 @@ function setMode(m){
   mode=m;
   document.getElementById('law-btn').className='mode-btn'+(m==='law'?' law-active':'');
   document.getElementById('pub-btn').className='mode-btn'+(m==='public'?' pub-active':'');
-  [['tl-title-law','tl-title-pub'],
-   ['sect-title-law','sect-title-pub']].forEach(([l,p])=>{
+  [['sect-title-law','sect-title-pub']].forEach(([l,p])=>{
     document.getElementById(l).style.display=m==='law'?'':'none';
     document.getElementById(p).style.display=m==='public'?'':'none';
   });
-  updateChips();renderSectors();renderTimeline();
+  updateChips();renderSectors();
   if(selState)renderBriefing(selState);
 }
 
@@ -1171,11 +1165,10 @@ function switchLeft(t){
 }
 
 function switchRight(t){
-  ['state','timeline','sectors'].forEach(x=>{
+  ['state','sectors'].forEach(x=>{
     document.getElementById('rtab-'+x).classList.toggle('active',x===t);
     document.getElementById('tab-'+x).style.display=x===t?'':'none';
   });
-  if(t==='timeline')renderTimeline();
   if(t==='sectors')renderSectors();
 }
 """
