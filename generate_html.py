@@ -326,7 +326,7 @@ CSS_PLACEHOLDER
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
 <script>
-let ANTHROPIC_API_KEY = localStorage.getItem('sue_map_ak') || '';
+let GEMINI_API_KEY = localStorage.getItem('sue_map_gk') || '';
 """
 
 JS = """\
@@ -783,17 +783,17 @@ function useChip(el){document.getElementById('query-box').value=el.dataset.q;sub
 
 // ═══════ API KEY MANAGEMENT ═══════
 function setApiKey(){
-  const k=prompt('Paste your Anthropic API key (stored locally in your browser only):');
-  if(k&&k.trim().startsWith('sk-ant')){
-    ANTHROPIC_API_KEY=k.trim();
-    localStorage.setItem('sue_map_ak',ANTHROPIC_API_KEY);
+  const k=prompt('Paste your Google Gemini API key (stored locally in your browser only):');
+  if(k&&k.trim().startsWith('AIza')){
+    GEMINI_API_KEY=k.trim();
+    localStorage.setItem('sue_map_gk',GEMINI_API_KEY);
     document.getElementById('ai-response').innerHTML='<span style="color:var(--active-green)">✓ API key saved. Ask your question!</span>';
   } else if(k!==null){
-    alert('That does not look like an Anthropic key (should start with sk-ant…). Try again.');
+    alert('That does not look like a Gemini key (should start with AIza…). Try again.');
   }
 }
 function clearApiKey(){
-  localStorage.removeItem('sue_map_ak');ANTHROPIC_API_KEY='';
+  localStorage.removeItem('sue_map_gk');GEMINI_API_KEY='';
   alert('API key cleared.');
 }
 
@@ -816,15 +816,15 @@ function toggleSpeak(){
   else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
 }
 
-// ═══════ CLAUDE API ═══════
+// ═══════ GEMINI API ═══════
 async function submitQuery(){
   const q=document.getElementById('query-box').value.trim();if(!q)return;
   const btn=document.getElementById('query-btn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
-  if(!ANTHROPIC_API_KEY){
-    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter API Key ›</button>';
+  if(!GEMINI_API_KEY){
+    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Gemini Key ›</button>';
     btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
   const lSys='You are a legal research analyst for the DAIL (Database of AI Litigation) maintained by GW Law. Answer in precise legal terminology. Reference specific jurisdictions, causes of action, and legal issues. Be analytical. 3-4 sentences.';
@@ -838,24 +838,18 @@ ${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
 Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
 Question: ${q}`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':ANTHROPIC_API_KEY,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:400,
-        system:mode==='law'?lSys:pSys,
-        messages:[{role:'user',content:ctx}]
+        system_instruction:{parts:[{text:mode==='law'?lSys:pSys}]},
+        contents:[{role:'user',parts:[{text:ctx}]}],
+        generationConfig:{maxOutputTokens:400}
       })
     });
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
     const data=await r.json();
-    const text=data.content?.[0]?.text||'No response.';
+    const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
     resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
     <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
     speakText(text);
