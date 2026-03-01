@@ -1,15 +1,56 @@
 """Generate sue_the_map.html — single self-contained file."""
-import json
+import json, re, os
+
+# Read API key from .env file if present
+def read_env_key():
+    env_paths = ['.env', '../.env', os.path.join(os.path.dirname(__file__), '.env')]
+    for p in env_paths:
+        if os.path.exists(p):
+            with open(p, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('GEMINI_API_KEY') or line.startswith('MISTRAL_API_KEY'):
+                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        return val
+    return ''
+
+MISTRAL_KEY = read_env_key()
+if MISTRAL_KEY:
+    print(f'API key loaded from .env ({MISTRAL_KEY[:8]}...)')
+else:
+    print('No API key found in .env — users will need to enter it manually')
+
 
 with open('dail_data.json', 'r', encoding='utf-8') as f:
-    dail_json_str = f.read()
+    dail_raw = json.load(f)
+
+def sanitize_str(s):
+    if not isinstance(s, str):
+        return s
+    # Remove backslashes that would break JS parsing
+    s = s.replace('\\', ' ')
+    # Collapse extra whitespace
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+def sanitize_obj(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize_obj(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_obj(i) for i in obj]
+    elif isinstance(obj, str):
+        return sanitize_str(obj)
+    return obj
+
+dail_clean = sanitize_obj(dail_raw)
+dail_json_str = json.dumps(dail_clean, ensure_ascii=False, separators=(',', ':'))
 
 with open('us-states.json', 'r', encoding='utf-8') as f:
     geo_json_str = f.read()
 
 # Escape </script> to prevent premature HTML tag closure
-dail_json_safe = dail_json_str.replace('</', '<\/')
-geo_json_safe = geo_json_str.replace('</', '<\/')
+dail_json_safe = dail_json_str.replace('</', '<\\/')
+geo_json_safe = geo_json_str.replace('</', '<\\/')
 
 CSS = """\
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -313,7 +354,9 @@ CSS_PLACEHOLDER
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
 <script>
-let GEMINI_API_KEY = localStorage.getItem('sue_map_gk') || '';
+var _baked='__MISTRAL_KEY_PLACEHOLDER__';var _stored=localStorage.getItem('sue_map_mk');
+let MISTRAL_API_KEY=(_stored&&_stored.length>20)?_stored:(_baked.length>20?_baked:'');
+if(MISTRAL_API_KEY) localStorage.setItem('sue_map_mk',MISTRAL_API_KEY);
 """
 
 JS = """\
@@ -764,14 +807,25 @@ function initVoice(){
   };
 
   recog.onend=()=>{
-    listening=false;
-    micBtn.classList.remove('listening');
-    micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
-    micStatus.textContent='Tap 🎙 to speak';
+    if(userStoppedMic){
+      listening=false;
+      micBtn.classList.remove('listening');
+      micBtn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3"/></svg>';
+      micStatus.textContent='Tap 🎙 to speak';
+    } else {
+      // Browser stopped it automatically after a phrase, restart it to keep listening
+      try{ recog.start(); }catch(e){}
+    }
   };
 
   recog.onerror=e=>{
+    if(e.error === 'no-speech' && !userStoppedMic) {
+      // Just restart on silence timeout
+      try{ recog.start(); }catch(err){}
+      return;
+    }
     listening=false;
+    userStoppedMic=true;
     micBtn.classList.remove('listening');
     micStatus.textContent=e.error==='not-allowed'?'❌ Mic access denied':'❌ Error — try again';
   };
@@ -784,21 +838,23 @@ function initVoice(){
     }
     document.getElementById('query-box').value=final||interim;
     if(final.trim()){
-      recog.stop();
       submitQuery();
     }
   };
 }
 
+let userStoppedMic=true;
 function toggleMic(){
   if(!recog)return;
-  if(listening){
+  if(listening && !userStoppedMic){
+    userStoppedMic=true; // Mark as explicitly stopped
     recog.stop();
     window.speechSynthesis.cancel();
     speaking=false;
     const sb=document.getElementById('speak-btn');
     if(sb)sb.textContent='🔊 Read Aloud';
   }else{
+    userStoppedMic=false; // Mark as running
     window.speechSynthesis.cancel();
     speaking=false;
     document.getElementById('query-box').value='';
@@ -821,17 +877,17 @@ function useChip(el){document.getElementById('query-box').value=el.dataset.q;sub
 
 // ═══════ API KEY MANAGEMENT ═══════
 function setApiKey(){
-  const k=prompt('Paste your Google Gemini API key (stored locally in your browser only):');
-  if(k&&k.trim().startsWith('AIza')){
-    GEMINI_API_KEY=k.trim();
-    localStorage.setItem('sue_map_gk',GEMINI_API_KEY);
+  const k=prompt('Paste your Mistral API key (stored locally in your browser only):');
+  if(k&&k.trim().length>20){
+    MISTRAL_API_KEY=k.trim();
+    localStorage.setItem('sue_map_mk',MISTRAL_API_KEY);
     document.getElementById('ai-response').innerHTML='<span style="color:var(--active-green)">✓ API key saved. Ask your question!</span>';
   } else if(k!==null){
-    alert('That does not look like a Gemini key (should start with AIza…). Try again.');
+    alert('That does not look like a Mistral key. Try again.');
   }
 }
 function clearApiKey(){
-  localStorage.removeItem('sue_map_gk');GEMINI_API_KEY='';
+  localStorage.removeItem('sue_map_mk');MISTRAL_API_KEY='';
   alert('API key cleared.');
 }
 
@@ -840,7 +896,7 @@ let speaking=false;
 function speakText(text){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  const clean=text.replace(/<[^>]*>/g,'').replace(/\*+/g,'').trim();
+  const clean=text.replace(/<[^>]*>/g,'').replace(/[*]+/g,'').trim();
   const utt=new SpeechSynthesisUtterance(clean);
   utt.rate=0.92;utt.pitch=1.05;utt.volume=1;
   // Try to get a natural-sounding voice
@@ -852,6 +908,7 @@ function speakText(text){
     if(pref)utt.voice=pref;
     utt.onstart=()=>{
       speaking=true;
+      if(listening){ recog.stop(); } // Pause mic while AI speaks
       const sb=document.getElementById('speak-btn');
       if(sb)sb.textContent='⏹ Stop Speaking';
       document.getElementById('mic-status').textContent='🔊 Speaking...';
@@ -860,9 +917,19 @@ function speakText(text){
       speaking=false;
       const sb=document.getElementById('speak-btn');
       if(sb)sb.textContent='🔊 Read Aloud';
-      document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+      // If we were in continuous voice mode, resume listening
+      if(document.getElementById('mic-btn').classList.contains('listening')){
+        try{ recog.start(); }catch(e){}
+      } else {
+        document.getElementById('mic-status').textContent='Tap 🎙 to speak';
+      }
     };
-    utt.onerror=()=>{speaking=false;};
+    utt.onerror=()=>{
+      speaking=false;
+      if(document.getElementById('mic-btn').classList.contains('listening')){
+        try{ recog.start(); }catch(e){}
+      }
+    };
     window.speechSynthesis.speak(utt);
   }
   // Voices may need a moment to load
@@ -882,55 +949,8 @@ function toggleSpeak(){
   }
 }
 
-// ═══════ GEMINI API (Conversational, DAIL-grounded) ═══════
-function buildSystemPrompt(){
-  // Inject the FULL dataset so the AI can only answer from this data
-  const statesSummary=Object.entries(DAIL_DATA.states).map(([abbr,s])=>{
-    const topSects=Object.entries(s.sector_counts||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}:${v}`).join(',');
-    return `${abbr}|${s.name}|total:${s.total}|active:${s.active}|media:${s.with_media}|sectors:${topSects}`;
-  }).join('\n');
-
-  const sectorData=Object.entries(DAIL_DATA.sector_totals).map(([k,v])=>`${k}:${v}`).join(', ');
-  const yearData=Object.entries(DAIL_DATA.year_trends).filter(([y])=>parseInt(y)>=2011)
-    .map(([y,v])=>`${y}:${v.total}`).join(', ');
-
-  const lSys=`You are a conversational AI litigation analyst for SueTheMap, powered by the DAIL (Database of AI Litigation) from GW Law.
-
-CRITICAL RULES:
-- You MUST answer ONLY using the DAIL data provided below. Do NOT use outside knowledge or make up statistics.
-- If a question cannot be answered from this data, say exactly: "I don't have that information in the DAIL dataset."
-- Keep answers concise and conversational (3-5 sentences). Use precise legal terminology.
-- Always cite specific states, numbers, or sectors from the data when relevant.
-
-DAIL DATASET (${DAIL_DATA.total_cases} total cases, 2011-2026):
-Total cases: ${DAIL_DATA.total_cases}
-Active cases with zero media coverage: ${DAIL_DATA.total_uncovered_active}
-
-Per-state data (abbr|name|total|active|media_covered|top_sectors):
-${statesSummary}
-
-Sector totals: ${sectorData}
-Yearly case counts: ${yearData}`;
-
-  const pSys=`You are a friendly AI assistant explaining AI lawsuits in plain language for SueTheMap.
-
-CRITICAL RULES:
-- You MUST answer ONLY using the DAIL data provided below. Do NOT make up facts or statistics.
-- If a question cannot be answered from this data, say: "I don't have that info in the dataset."
-- Keep it conversational, simple, and engaging (2-4 sentences). No legal jargon.
-
-DAIL DATASET (${DAIL_DATA.total_cases} total cases, 2011-2026):
-Total cases: ${DAIL_DATA.total_cases}
-Active cases with zero media coverage: ${DAIL_DATA.total_uncovered_active}
-
-Per-state data (abbr|name|total|active|media_covered|top_sectors):
-${statesSummary}
-
-Sector totals: ${sectorData}
-Yearly case counts: ${yearData}`;
-
-  return mode==='law'?lSys:pSys;
-}
+// ═══════ MISTRAL API (Conversational, DAIL-grounded) ═══════
+// __BUILD_SYS_PROMPT_PLACEHOLDER__
 
 async function submitQuery(){
   const q=document.getElementById('query-box').value.trim();if(!q)return;
@@ -938,36 +958,41 @@ async function submitQuery(){
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Thinking...';
-  if(!GEMINI_API_KEY){
-    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Gemini Key ›</button>';
+  if(!MISTRAL_API_KEY){
+    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Mistral Key ›</button>';
     btn.disabled=false;btn.innerHTML='Ask AI ›';return;
   }
-
+  
   // Add user message to conversation history
-  convHistory.push({role:'user',parts:[{text:q}]});
+  convHistory.push({role:'user',content:q});
   // Keep last 10 turns to avoid token limits
   if(convHistory.length>10)convHistory=convHistory.slice(-10);
 
   try{
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
+    const msgs=[{role:'system',content:buildSystemPrompt()},...convHistory];
+    const r=await fetch('https://api.mistral.ai/v1/chat/completions',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${MISTRAL_API_KEY}`
+      },
       body:JSON.stringify({
-        system_instruction:{parts:[{text:buildSystemPrompt()}]},
-        contents:convHistory,
-        generationConfig:{maxOutputTokens:500,temperature:0.3}
+        model:'mistral-small-latest',
+        messages:msgs,
+        temperature:0.3,
+        max_tokens:500
       })
     });
-    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||`HTTP ${r.status}`);}
     const data=await r.json();
-    const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
+    const text=data.choices?.[0]?.message?.content||'No response.';
 
     // Add assistant response to history for multi-turn
-    convHistory.push({role:'model',parts:[{text}]});
+    convHistory.push({role:'assistant',content:text});
 
-    resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing · DAIL Data</div>${text.replace(/\n/g,'<br>')}
-    <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>
-    <button onclick="convHistory=[];document.getElementById('ai-response').innerHTML='';" style="margin-top:8px;margin-left:6px;background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted)">🔄 New Chat</button>`;
+
+    // __RESP_DISPLAY_PLACEHOLDER__
+
 
     // Auto-speak the response
     speakText(text);
@@ -1017,7 +1042,84 @@ function switchRight(t){
 
 CLOSE = "\n</script>\n</body>\n</html>"
 
-final = BODY.replace('CSS_PLACEHOLDER', CSS) + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n" + JS + CLOSE
+# JS snippet injected outside triple-quoted string to avoid Python escape issues
+RESP_DISPLAY_JS = (
+    "    var _lbl=document.createElement('div');\n"
+    "    _lbl.style.cssText='font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px';\n"
+    "    var _mode=(mode==='law')?'Legal':'Public';\n"
+    "    _lbl.textContent='AI '+_mode+' Briefing - DAIL Data';\n"
+    "    resp.innerHTML='';\n"
+    "    resp.appendChild(_lbl);\n"
+    "    var _br=document.createElement('p');\n"
+    "    _br.style.cssText='margin:6px 0;line-height:1.6;white-space:pre-wrap';\n"
+    "    _br.textContent=text;\n"
+    "    resp.appendChild(_br);\n"
+    "    var _sb=document.createElement('button');\n"
+    "    _sb.id='speak-btn';\n"
+    "    _sb.textContent='\\uD83D\\uDD0A Read Aloud';\n"
+    "    _sb.setAttribute('style','margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text)');\n"
+    "    _sb.onclick=toggleSpeak;\n"
+    "    resp.appendChild(_sb);\n"
+    "    var _nb=document.createElement('button');\n"
+    "    _nb.textContent='\\uD83D\\uDD04 New Chat';\n"
+    "    _nb.setAttribute('style','margin-top:8px;margin-left:6px;background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--muted)');\n"
+    "    _nb.onclick=function(){convHistory=[];resp.innerHTML='';};\n"
+    "    resp.appendChild(_nb);\n"
+)
+
+
+BUILD_SYS_PROMPT_JS = """
+function buildSystemPrompt(){
+  const statesSummary=Object.entries(DAIL_DATA.states).map(([abbr,s])=>{
+    var top=Object.entries(s.sector_counts||{}).sort(function(a,b){return b[1]-a[1];}).slice(0,3).map(function(e){return e[0]+':'+e[1];}).join(',');
+    return abbr+'|'+s.name+'|total:'+s.total+'|active:'+s.active+'|media:'+s.with_media+'|sectors:'+top;
+  }).join('\\n');
+  var sd=Object.entries(DAIL_DATA.sector_totals).map(function(e){return e[0]+':'+e[1];}).join(', ');
+  var yd=Object.entries(DAIL_DATA.year_trends).filter(function(e){return parseInt(e[0])>=2011;}).map(function(e){return e[0]+':'+e[1].total;}).join(', ');
+  var NL='\\n';
+  var data=[
+    'DAIL DATASET ('+DAIL_DATA.total_cases+' total cases, 2011-2026):',
+    'Total cases: '+DAIL_DATA.total_cases,
+    'Active with zero media: '+DAIL_DATA.total_uncovered_active,
+    '',
+    'Per-state (abbr|name|total|active|media|top_sectors):',
+    statesSummary,
+    '',
+    'Sector totals: '+sd,
+    'Yearly counts: '+yd
+  ].join(NL);
+  var rLaw=[
+    'You are a conversational AI litigation analyst for SueTheMap, using the DAIL database.',
+    '',
+    'CRITICAL RULES:',
+    '- Answer ONLY from DAIL data below. Do NOT invent statistics.',
+    '- If the answer is not in the data, say: I do not have that information in the DAIL dataset.',
+    '- Concise 3-5 sentences, cite specific states and numbers.',
+    '',
+    data
+  ].join(NL);
+  var rPub=[
+    'You are a friendly assistant explaining AI lawsuits for SueTheMap.',
+    '',
+    'CRITICAL RULES:',
+    '- Answer ONLY from DAIL data below. Do NOT make up facts.',
+    '- If the answer is not in the data, say: I do not have that info in the dataset.',
+    '- 2-4 sentences, plain language, no jargon.',
+    '',
+    data
+  ].join(NL);
+  return mode==='law'?rLaw:rPub;
+}
+"""
+
+final = (BODY.replace('CSS_PLACEHOLDER', CSS)
+             .replace('__MISTRAL_KEY_PLACEHOLDER__', MISTRAL_KEY)
+         + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n"
+         + JS
+           .replace('// __BUILD_SYS_PROMPT_PLACEHOLDER__', BUILD_SYS_PROMPT_JS)
+           .replace('// __RESP_DISPLAY_PLACEHOLDER__', RESP_DISPLAY_JS)
+         + CLOSE)
+
 
 with open('sue_the_map.html', 'w', encoding='utf-8') as f:
     f.write(final)
