@@ -196,6 +196,42 @@ select.fsel:focus{border-color:var(--law-blue);}
   #main{height:auto;display:block;}
   .case-card{break-inside:avoid;page-break-inside:avoid;}
 }
+/* MODE PAGE */
+#mode-page{position:fixed;inset:0;background:var(--bg);z-index:1000;overflow-y:auto;
+  display:none;}
+#mode-page.open{display:block;animation:mpIn .25s ease;}
+@keyframes mpIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
+#mp-header{position:sticky;top:0;background:var(--surface);border-bottom:2px solid var(--border);
+  padding:13px 28px;display:flex;align-items:center;justify-content:space-between;z-index:10;gap:16px;}
+#mp-title{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--text);letter-spacing:1px;}
+#mp-subtitle{font-size:12px;color:var(--muted);margin-top:1px;}
+#mp-close{background:none;border:1px solid var(--border);border-radius:8px;padding:7px 18px;
+  cursor:pointer;font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif;flex-shrink:0;}
+#mp-close:hover{background:var(--surface2);}
+#mp-body{padding:24px 28px;max-width:1200px;margin:0 auto;}
+.mp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.mp-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.mp-stat-num{font-family:'DM Mono',monospace;font-size:30px;font-weight:700;line-height:1;}
+.mp-stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
+.mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.mp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.mp-card-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  font-weight:600;margin-bottom:14px;}
+.mp-bar-row{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+.mp-bar-label{font-size:12px;color:var(--text);width:110px;flex-shrink:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-bar-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.mp-bar-fill{height:100%;border-radius:4px;}
+.mp-bar-val{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;width:28px;text-align:right;}
+.mp-year-bar{display:flex;align-items:flex-end;gap:4px;height:110px;margin-top:10px;padding-bottom:2px;}
+.mp-yr-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.mp-yr-fill{width:100%;border-radius:3px 3px 0 0;min-height:3px;}
+.mp-yr-lbl{font-size:9px;color:var(--muted);transform:rotate(-45deg);transform-origin:top center;margin-top:4px;}
+.mp-yr-num{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;}
+.mp-story-card{background:var(--surface2);border-radius:8px;padding:12px 14px;
+  border-left:3px solid var(--accent2);}
+.mp-story-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.mp-story-meta{font-size:11px;color:var(--muted);line-height:1.5;}
 """
 
 BODY = """\
@@ -223,8 +259,8 @@ CSS_PLACEHOLDER
 <div id="header">
   <div id="logo">SUE <span>THE</span> MAP</div>
   <div id="mode-toggle">
-    <button class="mode-btn law-active" id="law-btn" onclick="setMode('law')">⚖️ LAW MODE</button>
-    <button class="mode-btn" id="pub-btn" onclick="setMode('public')">🌍 PUBLIC MODE</button>
+    <button class="mode-btn law-active" id="law-btn" onclick="openModePage('law')">⚖️ LAW MODE</button>
+    <button class="mode-btn" id="pub-btn" onclick="openModePage('public')">🌍 PUBLIC MODE</button>
   </div>
   <button id="share-btn" onclick="shareApp()" title="Copy shareable link">🔗 Share</button>
   <div id="global-stats">
@@ -341,6 +377,16 @@ CSS_PLACEHOLDER
   </div>
 </div>
 <div id="footer"><span>Built with <a href="https://dail.gwlaw.edu" target="_blank">DAIL data from GW Law</a> · GeorgeHacksxAI 2026</span></div>
+<div id="mode-page">
+  <div id="mp-header">
+    <div>
+      <div id="mp-title">⚖️ Legal Intelligence Dashboard</div>
+      <div id="mp-subtitle">293 AI Litigation Cases · GW Law DAIL Dataset</div>
+    </div>
+    <button id="mp-close" onclick="closeModePage()">✕ Back to Globe</button>
+  </div>
+  <div id="mp-body"></div>
+</div>
 <script>
 let GEMINI_API_KEY = '__GEMINI_KEY__' || localStorage.getItem('sue_map_gk') || '';
 """
@@ -467,6 +513,7 @@ function ttHtml(d){
 
 function initGlobe(){
   const el=document.getElementById('globeViz');
+  document.getElementById('globe-loading').style.display='none';
   globe=Globe({animateIn:false})(el)
     .width(el.offsetWidth||800).height(el.offsetHeight||600)
     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -491,7 +538,6 @@ function initGlobe(){
   const gc=document.getElementById('globe-container');
   gc.addEventListener('mousedown',()=>globe.controls().autoRotate=false);
   gc.addEventListener('touchstart',()=>globe.controls().autoRotate=false);
-  document.getElementById('globe-loading').style.display='none';
   buildYearBar();
   window.addEventListener('resize',()=>{globe.width(el.offsetWidth).height(el.offsetHeight);});
 }
@@ -854,11 +900,11 @@ ${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
 Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
 Question: ${q}`;
   try{
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        contents:[{role:'user',parts:[{text:(mode==='law'?lSys:pSys)+'\n\n'+ctx}]}],
+        contents:[{role:'user',parts:[{text:(mode==='law'?lSys:pSys)+'\\n\\n'+ctx}]}],
         generationConfig:{maxOutputTokens:400}
       })
     });
@@ -889,6 +935,125 @@ function setMode(m){
   });
   updateChips();renderSectors();renderUncovered();renderTimeline();
   if(selState)renderBriefing(selState);
+}
+
+// ═══════ MODE PAGE ═══════
+function openModePage(m){
+  setMode(m);
+  const pg=document.getElementById('mode-page');
+  const hdr=document.getElementById('mp-title');
+  const sub=document.getElementById('mp-subtitle');
+  if(m==='law'){
+    hdr.textContent='\u2696\ufe0f Legal Intelligence Dashboard';
+    sub.textContent='293 AI Litigation Cases \u00b7 GW Law DAIL Dataset';
+  } else {
+    hdr.textContent='📰 The Untold Story';
+    sub.textContent='Active AI lawsuits the media isn\u2019t covering';
+  }
+  pg.classList.add('open');
+  pg.scrollTop=0;
+  if(m==='law')renderLawPage();else renderPublicPage();
+}
+function closeModePage(){
+  document.getElementById('mode-page').classList.remove('open');
+}
+function _bar(label,val,max,color){
+  return `<div class="mp-bar-row">
+    <div class="mp-bar-label" title="${label}">${label}</div>
+    <div class="mp-bar-track"><div class="mp-bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:${color}"></div></div>
+    <div class="mp-bar-val">${val}</div></div>`;
+}
+function _yrBars(years,color){
+  const mx=Math.max(...years.map(([,v])=>v.total));
+  return years.map(([yr,v])=>`<div class="mp-yr-col">
+    <div class="mp-yr-num">${v.total}</div>
+    <div class="mp-yr-fill" style="height:${Math.max(3,(v.total/mx*88)).toFixed(0)}px;background:${color}"></div>
+    <div class="mp-yr-lbl">${yr}</div></div>`).join('');
+}
+function renderLawPage(){
+  const D=DAIL_DATA;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  const topStates=Object.entries(D.states).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
+  const sectors=Object.entries(D.sector_totals).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const years=Object.entries(D.year_trends).filter(([y])=>parseInt(y)>=2015).sort(([a],[b])=>a-b);
+  const covGap=Object.entries(D.states).filter(([,s])=>s.uncovered_active>0)
+    .sort((a,b)=>b[1].uncovered_active-a[1].uncovered_active).slice(0,8);
+  document.getElementById('mp-body').innerHTML=`
+  <div class="mp-stats">
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--text)">${D.total_cases}</div><div class="mp-stat-lbl">Total AI Cases (2011\u20132026)</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--active-green)">${totalActive}</div><div class="mp-stat-lbl">Active Litigations</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--law-blue)">${Object.keys(D.states).length}</div><div class="mp-stat-lbl">States with AI Cases</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--accent2)">${D.total_uncovered_active}</div><div class="mp-stat-lbl">Active \u2014 Zero Coverage</div></div>
+  </div>
+  <div class="mp-grid">
+    <div class="mp-card">
+      <div class="mp-card-title">Top 10 States by Case Volume</div>
+      ${topStates.map(([c,s])=>_bar(s.name||c,s.total,topStates[0][1].total,'var(--accent)')).join('')}
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Sector Breakdown</div>
+      ${sectors.map(([n,v])=>_bar(n,v,sectors[0][1],'var(--law-blue)')).join('')}
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Annual Filing Trends (2015\u20132026)</div>
+      <div class="mp-year-bar">${_yrBars(years,'var(--law-blue)')}</div>
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Coverage Gap \u2014 Unreported Active Cases by State</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px">
+          <th style="text-align:left;padding:4px 0">State</th>
+          <th style="text-align:right;padding:4px 6px">Total</th>
+          <th style="text-align:right;padding:4px 6px">Active</th>
+          <th style="text-align:right;padding:4px 0;color:var(--accent2)">Uncovered</th>
+        </tr></thead><tbody>
+        ${covGap.map(([c,s])=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:7px 0;font-weight:500">${s.name||c}</td>
+          <td style="text-align:right;color:var(--muted);padding:7px 6px">${s.total}</td>
+          <td style="text-align:right;color:var(--active-green);padding:7px 6px">${s.active}</td>
+          <td style="text-align:right;color:var(--accent2);font-weight:700;padding:7px 0">${s.uncovered_active}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+function renderPublicPage(){
+  const D=DAIL_DATA;
+  const totalActive=Object.values(D.states).reduce((s,st)=>s+(st.active||0),0);
+  const years=Object.entries(D.year_trends).filter(([y])=>parseInt(y)>=2015).sort(([a],[b])=>a-b);
+  const uncovStates=Object.entries(D.states).filter(([,s])=>s.uncovered_active>0)
+    .sort((a,b)=>b[1].uncovered_active-a[1].uncovered_active).slice(0,6);
+  const topSectors=Object.entries(D.sector_totals).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  document.getElementById('mp-body').innerHTML=`
+  <div class="mp-stats">
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--text)">${D.total_cases}</div><div class="mp-stat-lbl">AI Lawsuits Filed in the US</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--active-green)">${totalActive}</div><div class="mp-stat-lbl">Still Active in Courts</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--accent2)">${D.total_uncovered_active}</div><div class="mp-stat-lbl">Active Cases \u2014 No Press</div></div>
+    <div class="mp-stat"><div class="mp-stat-num" style="color:var(--law-blue)">${Object.keys(D.states).length}</div><div class="mp-stat-lbl">States Affected</div></div>
+  </div>
+  <div class="mp-grid">
+    <div class="mp-card" style="grid-column:1/-1">
+      <div class="mp-card-title">\u26a0 The Stories Nobody Is Writing</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">These states have active AI lawsuits with <strong>zero media coverage</strong>. Real cases. Real people. No reporters.</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${uncovStates.map(([c,s])=>`<div class="mp-story-card">
+          <div class="mp-story-title">${s.name||c}</div>
+          <div class="mp-story-meta">${s.uncovered_active} unreported active case${s.uncovered_active>1?'s':''}</div>
+          <div class="mp-story-meta">${s.active} active \u00b7 ${s.total} total filed</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Which industries are getting sued most?</div>
+      ${topSectors.map(([n,v])=>_bar(n,v,topSectors[0][1],'var(--accent2)')).join('')}
+    </div>
+    <div class="mp-card">
+      <div class="mp-card-title">Is it getting worse? Lawsuits filed each year</div>
+      <div class="mp-year-bar">${_yrBars(years,'var(--accent)')}</div>
+      <p style="font-size:11px;color:var(--muted);margin-top:12px">Filings surged after 2022 \u2014 when mainstream AI tools launched and people began suing.</p>
+    </div>
+  </div>`;
 }
 
 // ═══════ TABS ═══════
