@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const c=/Chrome/.test(navigator.userAgent)&&!/Edg/.test(navigator.userAgent);
   const e=/Edg/.test(navigator.userAgent);
   if(!c&&!e) document.getElementById('browser-warn').style.display='block';
-  initStats(); populateFilters(); renderUncovered(); renderSectors(); renderTimeline();
+  initStats(); populateFilters(); renderSectors(); renderTimeline();
   initVoice(); updateChips(); loadGlobe(); initKeyboard();
   // Auto-select the state with most cases after globe loads
   setTimeout(()=>{
