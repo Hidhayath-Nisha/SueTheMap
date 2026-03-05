@@ -14,7 +14,7 @@ def read_env_key():
                         return val
     return ''
 
-MISTRAL_KEY = read_env_key()
+GEMINI_KEY = read_env_key()
 
 with open('dail_data.json', 'r', encoding='utf-8') as f:
     dail_json_str = f.read()
@@ -437,7 +437,7 @@ CSS_PLACEHOLDER
 </div>
 
 <script>
-let MISTRAL_API_KEY = '__MISTRAL_KEY__' || localStorage.getItem('sue_map_mk') || '';
+let GEMINI_API_KEY = '__GEMINI_KEY__' || localStorage.getItem('sue_map_gk') || '';
 """
 
 JS = """\
@@ -994,17 +994,17 @@ function useChip(el){submitQuery(el.dataset.q);}
 
 // ═══════ API KEY MANAGEMENT ═══════
 function setApiKey(){
-  const k=prompt('Paste your Mistral API key (stored locally in your browser only):');
+  const k=prompt('Paste your Gemini API key (stored locally in your browser only):');
   if(k&&k.trim().length>20){
-    MISTRAL_API_KEY=k.trim();
-    localStorage.setItem('sue_map_mk',MISTRAL_API_KEY);
+    GEMINI_API_KEY=k.trim();
+    localStorage.setItem('sue_map_gk',GEMINI_API_KEY);
     document.getElementById('ai-response').innerHTML='<span style="color:var(--active-green)">✓ API key saved. Ask your question!</span>';
   } else if(k!==null){
-    alert('That does not look like a Mistral key. Try again.');
+    alert('That does not look like a Gemini key. Try again.');
   }
 }
 function clearApiKey(){
-  localStorage.removeItem('sue_map_mk');MISTRAL_API_KEY='';
+  localStorage.removeItem('sue_map_gk');GEMINI_API_KEY='';
   alert('API key cleared.');
 }
 
@@ -1057,15 +1057,15 @@ function toggleSpeak(){
   else{const t=document.getElementById('ai-response').innerText;if(t)speakText(t);}
 }
 
-// ═══════ MISTRAL API ═══════
+// ═══════ GEMINI API ═══════
 async function submitQuery(queryText){
   if(!queryText)return;
   const q=queryText.trim();if(!q)return;
   document.getElementById('ai-response').innerHTML='';
   const resp=document.getElementById('ai-response');
   resp.classList.add('show');resp.innerHTML='<span class="spinner"></span> Analyzing...';
-  if(!MISTRAL_API_KEY){
-    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Mistral Key ›</button>';
+  if(!GEMINI_API_KEY){
+    resp.innerHTML='<span style="color:var(--accent2)">⚠️ No API key set.</span> <button onclick="setApiKey()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--law-blue);border-radius:4px;background:none;color:var(--law-blue);cursor:pointer;font-size:13px">Enter Gemini Key ›</button>';
     return;
   }
   
@@ -1077,36 +1077,21 @@ States by volume: ${top10}
 Top sectors: ${Object.entries(DAIL_DATA.sector_totals).slice(0,7).map(([k,v])=>`${k}(${v})`).join(',')}
 Yearly trend: ${Object.entries(DAIL_DATA.year_trends).filter(([y])=>parseInt(y)>=2020).map(([y,v])=>`${y}(${v.total})`).join(',')}
 ${DAIL_DATA.total_uncovered_active} active cases have zero media coverage.
-Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}`;
-
-  // Build full system prompt + data
-  const sysMsg = (mode==='law'?lSys:pSys)+'\\n\\n'+ctx;
-  
-  // Add user message to conversation history
-  convHistory.push({role:'user',content:q});
-  if(convHistory.length>10)convHistory=convHistory.slice(-10);
+Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}
+Question: ${q}`;
 
   try{
-    const msgs=[{role:'system',content:sysMsg},...convHistory];
-    const r=await fetch('https://api.mistral.ai/v1/chat/completions',{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${MISTRAL_API_KEY}`
-      },
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'mistral-small-latest',
-        messages:msgs,
-        temperature:0.3,
-        max_tokens:500
+        contents:[{role:'user',parts:[{text:(mode==='law'?lSys:pSys)+'\\n\\n'+ctx}]}],
+        generationConfig:{maxOutputTokens:500}
       })
     });
-    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.message||`HTTP ${r.status}`);}
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
     const data=await r.json();
-    const text=data.choices?.[0]?.message?.content||'No response.';
-
-    // Add assistant response to history
-    convHistory.push({role:'assistant',content:text});
+    const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
 
     resp.innerHTML=`<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">AI ${mode==='law'?'Legal':'News'} Briefing</div>${text}
     <br><button id="speak-btn" onclick="toggleSpeak()" style="margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)">🔊 Read Aloud</button>`;
@@ -1115,7 +1100,6 @@ Current filter: sector=${activeSect||'none'}, year=${activeYr||'none'}`;
     if(mentioned)selectState(mentioned);
   }catch(e){
     resp.innerHTML=`<span style="color:var(--accent)">⚠ Error: ${e.message}</span>`;
-    convHistory.pop(); // Remove failed message
   }
 }
 
@@ -1368,7 +1352,7 @@ function switchRight(t){
 CLOSE = "\n</script>\n</body>\n</html>"
 
 final = BODY.replace('CSS_PLACEHOLDER', CSS) + "const DAIL_DATA = " + dail_json_safe + ";\nconst US_STATES_GEO = " + geo_json_safe + ";\n" + JS + CLOSE
-final = final.replace('__MISTRAL_KEY__', MISTRAL_KEY)
+final = final.replace('__GEMINI_KEY__', GEMINI_KEY)
 
 with open('index.html', 'w', encoding='utf-8') as f:
     f.write(final)
